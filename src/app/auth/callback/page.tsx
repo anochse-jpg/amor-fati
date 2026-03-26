@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-export default function AuthCallbackPage() {
+function AuthCallbackInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -24,7 +24,7 @@ export default function AuthCallbackPage() {
         }
       }
 
-      // Fallback: check if a session already exists (e.g. implicit/hash flow)
+      // Fallback: check if a session already exists
       const { data: { session } } = await supabase.auth.getSession()
       if (session) {
         const onboarded = session.user?.user_metadata?.onboarding_completed
@@ -38,6 +38,10 @@ export default function AuthCallbackPage() {
     handleCallback()
   }, [router, searchParams])
 
+  return null
+}
+
+export default function AuthCallbackPage() {
   return (
     <main className="min-h-screen flex items-center justify-center">
       <p style={{
@@ -50,6 +54,9 @@ export default function AuthCallbackPage() {
       }}>
         Signing in…
       </p>
+      <Suspense>
+        <AuthCallbackInner />
+      </Suspense>
     </main>
   )
 }
