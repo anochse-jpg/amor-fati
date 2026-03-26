@@ -6,9 +6,10 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get('code')
   const next = requestUrl.searchParams.get('next')
 
-  // On Vercel, the real public hostname comes via x-forwarded-host
+  // On Vercel, the real public hostname comes via x-forwarded-host.
+  // x-forwarded-proto can be "https,https" (multiple values) so take first.
   const forwardedHost = request.headers.get('x-forwarded-host')
-  const protocol = request.headers.get('x-forwarded-proto') ?? 'https'
+  const protocol = (request.headers.get('x-forwarded-proto') ?? 'https').split(',')[0].trim()
   const origin = forwardedHost
     ? `${protocol}://${forwardedHost}`
     : requestUrl.origin

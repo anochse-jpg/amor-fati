@@ -29,9 +29,12 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  // Use getUser() — validates the JWT server-side (Supabase recommended)
-  // This also refreshes the session cookie automatically
-  const { data: { user } } = await supabase.auth.getUser()
+  // Use getSession() — reads and validates the JWT from cookies locally.
+  // This is the correct approach for proxy/middleware: no extra network call
+  // to Supabase on every request (getUser() makes a live API call which can
+  // fail or time out, causing valid sessions to appear as unauthenticated).
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user ?? null
 
   // Public routes — always allow through, regardless of auth status
   if (isPublic) {
