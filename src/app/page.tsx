@@ -1,8 +1,17 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { ShaderAnimation } from '@/components/ui/shader-lines'
 import MotionButton from '@/components/ui/motion-button'
 
-export default function LandingPage() {
+export default async function LandingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
+  const params = await searchParams
+  if (params.code) {
+    redirect(`/auth/callback?code=${params.code}`)
+  }
   return (
     <main className="min-h-screen flex flex-col relative overflow-hidden">
 
