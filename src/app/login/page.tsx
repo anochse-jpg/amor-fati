@@ -136,9 +136,12 @@ function LoginPageInner() {
   async function handleOAuth(provider: 'google') {
     setOauthLoading(provider)
     const supabase = createClient()
+    // Use NEXT_PUBLIC_SITE_URL if set (ensures the redirect URL matches exactly
+    // what is registered in Supabase). Falls back to window.location.origin.
+    const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? window.location.origin
     await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: `${base}/auth/callback` },
     })
   }
 

@@ -6,7 +6,7 @@ const PUBLIC_ROUTES = ['/', '/login', '/signup', '/auth/callback', '/privacy', '
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
-  const isPublic = PUBLIC_ROUTES.some(r => pathname === r || pathname.startsWith('/auth/'))
+  const isPublic = PUBLIC_ROUTES.some(r => pathname === r || pathname.startsWith('/auth/') || pathname.startsWith('/api/'))
 
   let response = NextResponse.next({ request })
 
