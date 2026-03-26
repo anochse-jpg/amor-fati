@@ -1,0 +1,317 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Jost:wght@300;400;500&display=swap');
+@import "tailwindcss";
+/* v2 */
+
+:root {
+  --background: #0b0c0e;
+  --background-elevated: #111316;
+  --foreground: #ede7da;
+  --foreground-muted: #9e9280;
+  --foreground-subtle: #8c7d6a;
+  --muted: #181815;
+  --muted-deep: #131210;
+  --border: #252318;
+  --border-glow: #5b8fa8;
+  --card: #161510;
+  --accent: #c8956a;
+  --accent-dim: rgba(200, 149, 106, 0.4);
+  --accent-whisper: rgba(200, 149, 106, 0.08);
+  --gold-bright: #d8a87c;
+  --font-display: 'Cormorant Garamond', 'Georgia', serif;
+  --font-mono: 'DM Mono', 'Courier New', monospace;
+  --font-ui: 'Jost', system-ui, sans-serif;
+  --nav-bg: rgba(11, 12, 14, 0.94);
+  --nav-border: rgba(37, 35, 24, 1);
+  --landing-overlay: rgba(11, 12, 14, 0.84);
+  --landing-card-bg: rgba(12, 11, 10, 0.55);
+  --landing-card-border: rgba(200, 149, 106, 0.14);
+  --landing-card-shadow: 0 0 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(200,149,106,0.08);
+  --landing-glow: rgba(200, 149, 106, 0.07);
+}
+
+/* ─── Light theme ────────────────────────────────────────────────── */
+
+[data-theme="light"] {
+  --background: #f5efe6;
+  --background-elevated: #ede5d8;
+  --foreground: #1a130a;
+  --foreground-muted: #5e4e3a;
+  --foreground-subtle: #8a7560;
+  --muted: #e6dbc8;
+  --muted-deep: #ddd3c0;
+  --border: #cbbfa8;
+  --border-glow: #5b8fa8;
+  --card: #ede5d8;
+  --accent: #a85e28;
+  --accent-dim: rgba(168, 94, 40, 0.4);
+  --accent-whisper: rgba(168, 94, 40, 0.08);
+  --gold-bright: #b87030;
+  --nav-bg: rgba(245, 239, 230, 0.94);
+  --nav-border: rgba(203, 191, 168, 1);
+  --landing-overlay: rgba(245, 239, 230, 0.82);
+  --landing-card-bg: rgba(248, 242, 234, 0.72);
+  --landing-card-border: rgba(168, 94, 40, 0.18);
+  --landing-card-shadow: 0 0 60px rgba(0,0,0,0.08), inset 0 1px 0 rgba(168,94,40,0.10);
+  --landing-glow: rgba(168, 94, 40, 0.10);
+}
+
+[data-theme="light"] body::before {
+  opacity: 0.012;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  /* shadcn/originui compatibility — maps to Amor Fati tokens */
+  --color-primary: var(--accent);
+  --color-primary-foreground: #0c0b0a;
+  --color-secondary: var(--muted);
+  --color-secondary-foreground: var(--foreground-muted);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--foreground-subtle);
+  --color-card: var(--card);
+  --color-card-foreground: var(--foreground);
+  --color-border: var(--border);
+  --color-input: var(--border);
+  --color-ring: var(--accent);
+  --color-destructive: #c0392b;
+  --color-destructive-foreground: #fff;
+  --color-accent: var(--muted);
+  --color-accent-foreground: var(--foreground);
+  --color-popover: var(--card);
+  --color-popover-foreground: var(--foreground);
+}
+
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-display);
+  min-height: 100vh;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Grain texture overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+  font-weight: 400;
+}
+
+.font-display { font-family: var(--font-display); }
+.font-mono { font-family: var(--font-mono); }
+.font-ui { font-family: var(--font-ui); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: var(--background); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* Focus */
+:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* Selection */
+::selection {
+  background: rgba(200, 149, 106, 0.18);
+  color: var(--foreground);
+}
+
+/* ─── Animations ─────────────────────────────────────────────────── */
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.03); opacity: 1; }
+}
+
+.animate-fade-up {
+  animation: fadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.6s ease both;
+}
+
+.animate-slide-left {
+  animation: slideInLeft 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-breathe {
+  animation: breathe 4s ease-in-out infinite;
+}
+
+@keyframes fadeOutUp {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-14px); }
+}
+
+.animate-fade-out-up {
+  animation: fadeOutUp 0.26s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes fadeInSoft {
+  from { opacity: 0; transform: scale(0.985); filter: blur(5px); }
+  to   { opacity: 1; transform: scale(1);     filter: blur(0);   }
+}
+
+.animate-fade-in-soft {
+  animation: fadeInSoft 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Staggered delays */
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-400 { animation-delay: 400ms; }
+.delay-500 { animation-delay: 500ms; }
+.delay-600 { animation-delay: 600ms; }
+.delay-700 { animation-delay: 700ms; }
+.delay-800 { animation-delay: 800ms; }
+
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(200,149,106,0.4), 0 0 24px rgba(200,149,106,0.15); }
+  50% { box-shadow: 0 0 18px rgba(200,149,106,0.65), 0 0 50px rgba(200,149,106,0.22); }
+}
+
+.btn-primary {
+  animation: glowPulse 3s ease-in-out infinite;
+  transition: all 0.2s ease;
+}
+.btn-primary:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 0 26px rgba(200,149,106,0.75), 0 0 60px rgba(200,149,106,0.3) !important;
+  animation-play-state: paused;
+}
+
+.btn-secondary {
+  transition: all 0.25s ease;
+}
+.btn-secondary:hover {
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+  box-shadow: 0 0 12px rgba(200,149,106,0.18), inset 0 0 12px rgba(200,149,106,0.05);
+}
+
+/* ─── Textarea & Input ─────────────────────────────────────────────── */
+
+textarea, input {
+  font-family: var(--font-display);
+}
+
+textarea::placeholder, input::placeholder {
+  font-family: var(--font-ui);
+  font-style: italic;
+}
+
+/* ─── Page transition ─────────────────────────────────────────────── */
+
+.page-enter {
+  animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ─── Decorative divider ─────────────────────────────────────────── */
+
+.divider-ornament {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--foreground-subtle);
+}
+
+.divider-ornament::before,
+.divider-ornament::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ─── Progress bar ─────────────────────────────────────────────── */
+
+.progress-bar {
+  height: 1px;
+  background: var(--border);
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+  transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ─── Stoic quote accent ─────────────────────────────────────────── */
+
+.quote-accent {
+  border-left: 1.5px solid var(--accent-dim);
+  padding-left: 0.75rem;
+  position: relative;
+}

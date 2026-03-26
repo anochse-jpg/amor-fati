@@ -1,0 +1,568 @@
+'use client'
+
+import { useState, useEffect, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import { Nav } from '@/components/ui'
+import { JolyButton } from '@/components/ui/joly-button'
+
+interface Entry {
+  id: string
+  type: 'morning' | 'evening' | 'practice'
+  content: Record<string, string>
+  mood_score: number | null
+  entry_date: string
+  created_at: string
+}
+
+type FilterType = 'all' | 'morning' | 'evening' | 'practice'
+
+const MOOD_LABELS = ['', '😔', '😐', '🙂', '😊', '✨']
+
+const CONTENT_LABELS: Record<string, string> = {
+  intention: 'Intention',
+  obstacle: 'Obstacle',
+  gratitude: 'Gratitude',
+  accomplished: 'What went well',
+  struggle: 'Where I fell short',
+  lesson: 'Lesson',
+  situation: 'The situation',
+  what_i_control: 'What I control',
+  what_i_dont_control: "What I don't control",
+  action: 'The action',
+}
+
+// Morning first, then evening, then practice within each day
+const TYPE_ORDER: Record<string, number> = { morning: 0, evening: 1, practice: 2 }
+
+const TYPE_ICONS: Record<string, string> = { morning: '◐', evening: '◑', practice: '◈' }
+
+const FILTERS: { label: string; value: FilterType }[] = [
+  { label: 'All', value: 'all' },
+  { label: '◐  Morning', value: 'morning' },
+  { label: '◑  Evening', value: 'evening' },
+  { label: '◈  Practice', value: 'practice' },
+]
+
+function formatDate(dateStr: string) {
+  const date = new Date(dateStr + 'T00:00:00')
+  const today = new Date().toISOString().split('T')[0]
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0]
+  if (dateStr === today) return 'Today'
+  if (dateStr === yesterday) return 'Yesterday'
+  return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+}
+
+function computeStreak(entries: Entry[]): number {
+  const uniqueDates = [...new Set(entries.map(e => e.entry_date))].sort().reverse()
+  if (uniqueDates.length === 0) return 0
+
+  const today = new Date().toISOString().split('T')[0]
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0]
+
+  if (uniqueDates[0] !== today && uniqueDates[0] !== yesterday) return 0
+
+  let streak = 1
+  for (let i = 1; i < uniqueDates.length; i++) {
+    const curr = new Date(uniqueDates[i - 1] + 'T00:00:00')
+    const prev = new Date(uniqueDates[i] + 'T00:00:00')
+    const diffDays = Math.round((curr.getTime() - prev.getTime()) / 86400000)
+    if (diffDays === 1) streak++
+    else break
+  }
+  return streak
+}
+
+export default function HistoryPage() {
+  const router = useRouter()
+  const [entries, setEntries] = useState<Entry[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selected, setSelected] = useState<Entry | null>(null)
+  const [filter, setFilter] = useState<FilterType>('all')
+  const [sortDesc, setSortDesc] = useState(true)
+
+  useEffect(() => {
+    async function load() {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+
+      if (!user) {
+        router.push('/login')
+        return
+      }
+
+      const { data } = await supabase
+        .from('journal_entries')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('entry_date', { ascending: false })
+        .order('created_at', { ascending: true })
+        .limit(1000)
+
+      setEntries(data || [])
+      setLoading(false)
+    }
+    load()
+  }, [router])
+
+  const streak = useMemo(() => computeStreak(entries), [entries])
+
+  // Filter then sort by date direction
+  const groupedArray = useMemo(() => {
+    const filtered = filter === 'all' ? entries : entries.filter(e => e.type === filter)
+
+    const groups: Record<string, Entry[]> = {}
+    filtered.forEach(entry => {
+      if (!groups[entry.entry_date]) groups[entry.entry_date] = []
+      groups[entry.entry_date].push(entry)
+    })
+
+    // Within each day: morning → evening → practice
+    Object.values(groups).forEach(dayEntries => {
+      dayEntries.sort((a, b) => (TYPE_ORDER[a.type] ?? 3) - (TYPE_ORDER[b.type] ?? 3))
+    })
+
+    // Sort date groups newest or oldest first
+    return Object.entries(groups).sort(([a], [b]) =>
+      sortDesc ? b.localeCompare(a) : a.localeCompare(b)
+    )
+  }, [entries, filter, sortDesc])
+
+  const totalFiltered = groupedArray.reduce((sum, [, day]) => sum + day.length, 0)
+
+  if (loading) {
+    return (
+      <main className="min-h-screen flex items-center justify-center">
+        <div
+          style={{
+            width: '6px',
+            height: '6px',
+            borderRadius: '50%',
+            background: 'var(--accent)',
+            opacity: 0.4,
+            animation: 'breathe 2s ease-in-out infinite',
+          }}
+        />
+      </main>
+    )
+  }
+
+  // ─── Detail view ──────────────────────────────────────────────────────────────
+  if (selected) {
+    return (
+      <main className="min-h-screen flex flex-col px-6 pb-28">
+        <div className="max-w-lg mx-auto w-full pt-12 animate-fade-up">
+          <JolyButton
+            variant="ghost"
+            size="sm"
+            onClick={() => setSelected(null)}
+            className="mb-8"
+          >
+            ← All entries
+          </JolyButton>
+
+          <div style={{ marginBottom: '2rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '0.5rem' }}>
+              <span
+                style={{
+                  fontFamily: 'var(--font-ui)',
+                  fontSize: '10px',
+                  letterSpacing: '0.18em',
+                  color: 'var(--accent)',
+                  textTransform: 'uppercase',
+                  opacity: 0.8,
+                }}
+              >
+                {TYPE_ICONS[selected.type]} {selected.type}
+              </span>
+              <span
+                style={{
+                  fontFamily: 'var(--font-ui)',
+                  fontSize: '10px',
+                  letterSpacing: '0.12em',
+                  color: 'var(--foreground-subtle)',
+                  opacity: 0.5,
+                }}
+              >
+                {formatDate(selected.entry_date)}
+              </span>
+            </div>
+            {selected.mood_score && (
+              <span style={{ fontSize: '1.4rem' }}>{MOOD_LABELS[selected.mood_score]}</span>
+            )}
+          </div>
+
+          <div
+            style={{
+              background: 'var(--card)',
+              border: '1px solid var(--border)',
+              borderRadius: '10px',
+              padding: '24px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '2rem',
+            }}
+          >
+            {Object.entries(selected.content).map(([key, value]) =>
+              value ? (
+                <div key={key}>
+                  <p
+                    style={{
+                      fontFamily: 'var(--font-ui)',
+                      fontSize: '10px',
+                      letterSpacing: '0.16em',
+                      color: 'var(--foreground-subtle)',
+                      textTransform: 'uppercase',
+                      marginBottom: '0.6rem',
+                      opacity: 0.6,
+                    }}
+                  >
+                    {CONTENT_LABELS[key] || key}
+                  </p>
+                  <p
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '1rem',
+                      color: 'var(--foreground)',
+                      lineHeight: 1.8,
+                      fontWeight: 300,
+                    }}
+                  >
+                    {value}
+                  </p>
+                </div>
+              ) : null
+            )}
+          </div>
+        </div>
+        <Nav current="/history" />
+      </main>
+    )
+  }
+
+  // ─── List view ────────────────────────────────────────────────────────────────
+  return (
+    <main className="min-h-screen flex flex-col px-6 pb-28">
+      <div className="max-w-lg mx-auto w-full pt-12">
+
+        {/* Header */}
+        <div className="mb-6 animate-fade-up">
+          <p
+            style={{
+              fontFamily: 'var(--font-ui)',
+              fontSize: '10px',
+              letterSpacing: '0.2em',
+              color: 'var(--accent)',
+              textTransform: 'uppercase',
+              marginBottom: '0.4rem',
+              opacity: 0.8,
+            }}
+          >
+            Journal
+          </p>
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+            <h1
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '1.75rem',
+                fontWeight: 400,
+                color: 'var(--foreground)',
+              }}
+            >
+              Your practice
+            </h1>
+            {streak > 0 && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: 'var(--card)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '20px',
+                  padding: '4px 12px',
+                  marginBottom: '2px',
+                }}
+              >
+                <span style={{ fontSize: '11px', opacity: 0.8 }}>◈</span>
+                <span
+                  style={{
+                    fontFamily: 'var(--font-ui)',
+                    fontSize: '11px',
+                    color: 'var(--accent)',
+                    letterSpacing: '0.04em',
+                  }}
+                >
+                  {streak} day{streak !== 1 ? 's' : ''}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Filter tabs + sort toggle */}
+        <div
+          className="animate-fade-up delay-100"
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '1.5rem', flexWrap: 'wrap' }}
+        >
+          {FILTERS.map(f => (
+            <button
+              key={f.value}
+              onClick={() => setFilter(f.value)}
+              style={{
+                fontFamily: 'var(--font-ui)',
+                fontSize: '10px',
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                padding: '5px 11px',
+                borderRadius: '20px',
+                border: filter === f.value ? '1px solid var(--accent)' : '1px solid var(--border)',
+                background: filter === f.value ? 'var(--accent)' : 'transparent',
+                color: filter === f.value ? '#0c0b0a' : 'var(--foreground-subtle)',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {f.label}
+            </button>
+          ))}
+          <button
+            onClick={() => setSortDesc(s => !s)}
+            style={{
+              marginLeft: 'auto',
+              fontFamily: 'var(--font-ui)',
+              fontSize: '10px',
+              letterSpacing: '0.12em',
+              padding: '5px 10px',
+              borderRadius: '6px',
+              border: '1px solid var(--border)',
+              background: 'transparent',
+              color: 'var(--foreground-subtle)',
+              cursor: 'pointer',
+              opacity: 0.6,
+              transition: 'opacity 0.15s ease',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '1' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '0.6' }}
+          >
+            {sortDesc ? '↓ Newest' : '↑ Oldest'}
+          </button>
+        </div>
+
+        {/* Empty state */}
+        {entries.length === 0 ? (
+          <div className="text-center py-20 animate-fade-up delay-100">
+            <div
+              style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                border: '1px solid var(--border)',
+                margin: '0 auto 1.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <span style={{ color: 'var(--foreground-subtle)', fontSize: '14px' }}>◫</span>
+            </div>
+            <p
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '1.1rem',
+                color: 'var(--foreground-muted)',
+                marginBottom: '0.5rem',
+              }}
+            >
+              No entries yet.
+            </p>
+            <p
+              style={{
+                fontFamily: 'var(--font-ui)',
+                fontSize: '12px',
+                color: 'var(--foreground-subtle)',
+                marginBottom: '2rem',
+                opacity: 0.6,
+              }}
+            >
+              Begin today&apos;s practice to see your entries here.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '260px', margin: '0 auto' }}>
+              <JolyButton asChild>
+                <a href="/morning">Morning reflection</a>
+              </JolyButton>
+              <JolyButton variant="outline" asChild>
+                <a href="/evening">Evening reflection</a>
+              </JolyButton>
+            </div>
+          </div>
+        ) : groupedArray.length === 0 ? (
+          // Filtered empty state
+          <div className="text-center py-16 animate-fade-up delay-100">
+            <p
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '1rem',
+                color: 'var(--foreground-muted)',
+                marginBottom: '0.5rem',
+              }}
+            >
+              No {filter} entries yet.
+            </p>
+            <button
+              onClick={() => setFilter('all')}
+              style={{
+                fontFamily: 'var(--font-ui)',
+                fontSize: '11px',
+                color: 'var(--accent)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                opacity: 0.8,
+              }}
+            >
+              Show all entries
+            </button>
+          </div>
+        ) : (
+          <div className="animate-fade-up delay-100" style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+            {groupedArray.map(([date, dayEntries]) => (
+              <div key={date} style={{ marginBottom: '2rem' }}>
+                {/* Date heading */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    marginBottom: '10px',
+                  }}
+                >
+                  <p
+                    style={{
+                      fontFamily: 'var(--font-ui)',
+                      fontSize: '10px',
+                      letterSpacing: '0.14em',
+                      color: 'var(--foreground-subtle)',
+                      textTransform: 'uppercase',
+                      opacity: 0.5,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {formatDate(date)}
+                  </p>
+                  <div style={{ flex: 1, height: '1px', background: 'var(--border)', opacity: 0.5 }} />
+                </div>
+
+                {/* Entries for that day */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {dayEntries.map(entry => {
+                    const firstKey = Object.keys(entry.content)[0]
+                    const firstLabel = firstKey ? CONTENT_LABELS[firstKey] : null
+                    const firstValue = firstKey ? entry.content[firstKey] : null
+
+                    return (
+                      <button
+                        key={entry.id}
+                        onClick={() => setSelected(entry)}
+                        className="w-full text-left transition-all duration-200 cursor-pointer group"
+                        style={{
+                          background: 'var(--card)',
+                          border: '1px solid var(--border)',
+                          borderRadius: '6px',
+                          padding: '14px 16px',
+                        }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent-dim)' }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)' }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                              <span
+                                style={{
+                                  fontFamily: 'var(--font-ui)',
+                                  fontSize: '9px',
+                                  letterSpacing: '0.18em',
+                                  color: 'var(--accent)',
+                                  textTransform: 'uppercase',
+                                  opacity: 0.7,
+                                }}
+                              >
+                                {TYPE_ICONS[entry.type]} {entry.type}
+                              </span>
+                              {entry.mood_score && (
+                                <span style={{ fontSize: '12px' }}>{MOOD_LABELS[entry.mood_score]}</span>
+                              )}
+                              {firstLabel && (
+                                <span
+                                  style={{
+                                    fontFamily: 'var(--font-ui)',
+                                    fontSize: '9px',
+                                    letterSpacing: '0.1em',
+                                    color: 'var(--foreground-subtle)',
+                                    opacity: 0.4,
+                                    textTransform: 'uppercase',
+                                  }}
+                                >
+                                  · {firstLabel}
+                                </span>
+                              )}
+                            </div>
+                            {firstValue && (
+                              <p
+                                style={{
+                                  fontFamily: 'var(--font-display)',
+                                  fontSize: '0.875rem',
+                                  color: 'var(--foreground-muted)',
+                                  lineHeight: 1.5,
+                                  overflow: 'hidden',
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical',
+                                }}
+                              >
+                                {firstValue}
+                              </p>
+                            )}
+                          </div>
+                          <span
+                            style={{
+                              color: 'var(--foreground-subtle)',
+                              opacity: 0.3,
+                              marginLeft: '12px',
+                              fontSize: '12px',
+                              flexShrink: 0,
+                            }}
+                            className="group-hover:opacity-60 transition-opacity"
+                          >
+                            →
+                          </span>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+
+            {/* Footer */}
+            <p
+              style={{
+                fontFamily: 'var(--font-ui)',
+                fontSize: '11px',
+                color: 'var(--foreground-subtle)',
+                opacity: 0.3,
+                textAlign: 'center',
+                paddingTop: '1rem',
+              }}
+            >
+              {totalFiltered} entr{totalFiltered === 1 ? 'y' : 'ies'}
+              {filter !== 'all' ? ` · ${filter} only` : ' · all time'}
+            </p>
+          </div>
+        )}
+      </div>
+      <Nav current="/history" />
+    </main>
+  )
+}
