@@ -29,31 +29,22 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  let session = null
-  try {
-    const { data, error } = await supabase.auth.getSession()
-    if (error) {
-      // Invalid/expired refresh token — clear all auth cookies so the client
-      // starts fresh rather than looping on failed token refreshes
-      const cleared = NextResponse.redirect(new URL('/login', request.url))
-      request.cookies.getAll()
-        .filter(c => c.name.startsWith('sb-'))
-        .forEach(c => cleared.cookies.delete(c.name))
-      return cleared
+  // Use getUser() — validates the JWT server-side (Supabase recommended)
+  // This also refreshes the session cookie automatically
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // Public routes — always allow through, regardless of auth status
+  if (isPublic) {
+    // Only redirect: authenticated users on login/signup → send to /morning
+    if (user && (pathname === '/login' || pathname === '/signup')) {
+      return NextResponse.redirect(new URL('/morning', request.url))
     }
-    session = data.session
-  } catch {
-    // Network or unexpected error — let the request through
+    return response
   }
 
-  // Redirect unauthenticated users away from protected routes
-  if (!session && !isPublic) {
+  // Protected routes — require authentication
+  if (!user) {
     return NextResponse.redirect(new URL('/login', request.url))
-  }
-
-  // Redirect authenticated users away from auth pages
-  if (session && (pathname === '/login' || pathname === '/signup')) {
-    return NextResponse.redirect(new URL('/morning', request.url))
   }
 
   return response
