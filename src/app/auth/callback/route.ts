@@ -48,7 +48,11 @@ export async function GET(request: NextRequest) {
 
       return response
     }
+
+    // Expose the actual error so we can diagnose — remove after debugging
+    const msg = error?.message ?? (data.user ? 'no-user' : 'unknown')
+    return NextResponse.redirect(`${origin}/login?error=oauth&msg=${encodeURIComponent(msg)}`)
   }
 
-  return NextResponse.redirect(`${origin}/login?error=oauth`)
+  return NextResponse.redirect(`${origin}/login?error=oauth&msg=no-code`)
 }
