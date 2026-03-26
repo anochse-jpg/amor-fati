@@ -25,7 +25,10 @@ export async function GET(request: NextRequest) {
     )
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`)
+      const { data: { user } } = await supabase.auth.getUser()
+      const onboarded = user?.user_metadata?.onboarding_completed
+      const destination = next !== '/morning' ? next : (onboarded ? '/morning' : '/onboarding')
+      return NextResponse.redirect(`${origin}${destination}`)
     }
   }
 
