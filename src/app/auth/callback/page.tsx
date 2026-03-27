@@ -24,7 +24,7 @@ function CallbackHandler() {
         return
       }
       const onboarded = data.user.user_metadata?.onboarding_completed
-      router.replace(next ?? (onboarded ? '/morning' : '/onboarding'))
+      router.replace(next ?? (onboarded ? '/home' : '/onboarding'))
     })
   }, [router, searchParams])
 

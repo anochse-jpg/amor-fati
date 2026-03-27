@@ -1,5 +1,6 @@
 'use client'
 
+import { motion } from 'motion/react'
 import { FC } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -22,7 +23,7 @@ const MotionButton: FC<MotionButtonProps> = ({
   className,
 }) => {
   const shared = cn(
-    'group relative h-14 w-full cursor-pointer rounded-full p-1 outline-none transition-opacity',
+    'group relative h-14 w-full cursor-pointer rounded-full p-1 outline-none btn-primary',
     'border border-[var(--accent-dim)]',
     disabled && 'opacity-40 cursor-not-allowed',
     className
@@ -38,10 +39,7 @@ const MotionButton: FC<MotionButtonProps> = ({
       />
       {/* Arrow icon */}
       <div className="absolute top-1/2 left-4 -translate-y-1/2 translate-x-0 duration-500 group-hover:translate-x-[0.4rem] z-10">
-        <ArrowRight
-          className="size-5"
-          style={{ color: '#0c0b0a' }}
-        />
+        <ArrowRight className="size-5" style={{ color: '#0c0b0a' }} />
       </div>
       {/* Label */}
       <span
@@ -59,15 +57,11 @@ const MotionButton: FC<MotionButtonProps> = ({
     </>
   )
 
-  if (href) {
-    return (
-      <a href={href} className={shared} style={{ display: 'block', textDecoration: 'none' }}>
-        {inner}
-      </a>
-    )
-  }
-
-  return (
+  const buttonEl = href ? (
+    <a href={href} className={shared} style={{ display: 'block', textDecoration: 'none' }}>
+      {inner}
+    </a>
+  ) : (
     <button
       type={type}
       onClick={onClick}
@@ -77,6 +71,48 @@ const MotionButton: FC<MotionButtonProps> = ({
     >
       {inner}
     </button>
+  )
+
+  return (
+    <div style={{ position: 'relative', width: '100%' }}>
+      {/* Outer pulsing ring */}
+      <motion.div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: '-6px',
+          borderRadius: '9999px',
+          border: '1px solid rgba(200,149,106,0.2)',
+          pointerEvents: 'none',
+        }}
+        animate={{
+          boxShadow: [
+            '0 0 0px rgba(200,149,106,0)',
+            '0 0 18px 3px rgba(200,149,106,0.32)',
+            '0 0 0px rgba(200,149,106,0)',
+          ],
+          opacity: [0.5, 1, 0.5],
+        }}
+        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', delay: 0.8 }}
+      />
+      {/* Second outer ring, offset timing */}
+      <motion.div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: '-12px',
+          borderRadius: '9999px',
+          border: '1px solid rgba(200,149,106,0.07)',
+          pointerEvents: 'none',
+        }}
+        animate={{
+          opacity: [0, 0.6, 0],
+          scale: [0.96, 1.02, 0.96],
+        }}
+        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', delay: 1.5 }}
+      />
+      {buttonEl}
+    </div>
   )
 }
 

@@ -40,7 +40,7 @@ export async function proxy(request: NextRequest) {
   if (isPublic) {
     // Only redirect: authenticated users on login/signup → send to /morning
     if (user && (pathname === '/login' || pathname === '/signup')) {
-      return NextResponse.redirect(new URL('/morning', request.url))
+      return NextResponse.redirect(new URL('/home', request.url))
     }
     return response
   }

@@ -462,7 +462,7 @@ export default function OnboardingPage() {
 
     setDone(true)
     setTimeout(() => {
-      router.push(routine === 'evening' ? '/evening' : '/morning')
+      router.push('/home')
       router.refresh()
     }, 1600)
   }

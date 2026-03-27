@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { motion } from 'motion/react'
 import Link from 'next/link'
+import { Settings } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Nav } from '@/components/ui'
 import { useTimeOfDay } from '@/hooks/useTimeOfDay'
@@ -444,26 +445,31 @@ export default function HomePage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6 }}
-          style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '2.5rem' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '2.5rem', justifyContent: 'space-between' }}
         >
-          <div style={{
-            width: '28px', height: '28px', borderRadius: '50%',
-            border: '1px solid var(--accent-dim)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 0 12px rgba(200,149,106,0.18)',
-          }}>
-            <span style={{ color: 'var(--accent)', fontSize: '13px', lineHeight: 1 }}>∞</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              width: '28px', height: '28px', borderRadius: '50%',
+              border: '1px solid var(--accent-dim)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 0 12px rgba(200,149,106,0.18)',
+            }}>
+              <span style={{ color: 'var(--accent)', fontSize: '13px', lineHeight: 1 }}>∞</span>
+            </div>
+            <span style={{
+              fontFamily: 'var(--font-ui)',
+              fontSize: '10px',
+              letterSpacing: '0.22em',
+              textTransform: 'uppercase',
+              color: 'var(--foreground-subtle)',
+              opacity: 0.4,
+            }}>
+              Amor Fati
+            </span>
           </div>
-          <span style={{
-            fontFamily: 'var(--font-ui)',
-            fontSize: '10px',
-            letterSpacing: '0.22em',
-            textTransform: 'uppercase',
-            color: 'var(--foreground-subtle)',
-            opacity: 0.4,
-          }}>
-            Amor Fati
-          </span>
+          <Link href="/settings" style={{ display: 'flex', alignItems: 'center', opacity: 0.4, textDecoration: 'none' }}>
+            <Settings size={14} color="var(--foreground-subtle)" />
+          </Link>
         </motion.div>
 
         {/* ── Greeting ── */}

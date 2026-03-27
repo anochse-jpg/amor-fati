@@ -2,6 +2,7 @@
 
 import { cn } from '@/lib/utils'
 import { ButtonHTMLAttributes, forwardRef, InputHTMLAttributes, TextareaHTMLAttributes } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 
 // ─── Button ───────────────────────────────────────────────────────────────────
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -183,17 +184,22 @@ export function ProgressBar({ total, current }: { total: number; current: number
           className="flex-1 h-px relative overflow-hidden"
           style={{ background: 'var(--border)' }}
         >
-          {i <= current && (
-            <div
-              className="absolute inset-0"
-              style={{
-                background: i < current
-                  ? 'var(--accent)'
-                  : 'linear-gradient(90deg, var(--accent-dim), var(--accent))',
-                animation: i === current ? 'none' : undefined,
-              }}
-            />
-          )}
+          <AnimatePresence>
+            {i <= current && (
+              <motion.div
+                className="absolute inset-0"
+                initial={{ scaleX: 0, originX: 0 }}
+                animate={{ scaleX: 1 }}
+                transition={{ type: 'spring', stiffness: 260, damping: 28, delay: i * 0.04 }}
+                style={{
+                  background: i < current
+                    ? 'var(--accent)'
+                    : 'linear-gradient(90deg, var(--accent-dim), var(--accent))',
+                  transformOrigin: '0% 50%',
+                }}
+              />
+            )}
+          </AnimatePresence>
         </div>
       ))}
     </div>
@@ -234,20 +240,21 @@ export function PageHeader({ label, title }: { label: string; title: string }) {
 
 // ─── Nav ──────────────────────────────────────────────────────────────────────
 const NAV_ICONS: Record<string, string> = {
+  '/home': '◎',
   '/morning': '◐',
   '/evening': '◑',
   '/practice': '◈',
   '/history': '◫',
-  '/settings': '⊙',
+  '/insights': '◉',
 }
 
 export function Nav({ current }: { current: string }) {
   const links = [
+    { href: '/home', label: 'Home' },
     { href: '/morning', label: 'Morning' },
     { href: '/evening', label: 'Evening' },
-    { href: '/practice', label: 'Practice' },
     { href: '/history', label: 'Journal' },
-    { href: '/settings', label: 'Settings' },
+    { href: '/insights', label: 'Insights' },
   ]
 
   return (
@@ -268,12 +275,19 @@ export function Nav({ current }: { current: string }) {
               <a
                 key={href}
                 href={href}
-                className="flex flex-col items-center gap-1 px-3 py-1.5 rounded transition-all duration-200"
-                style={{
-                  textDecoration: 'none',
-                }}
+                className="relative flex flex-col items-center gap-1 px-3 py-1.5 rounded-lg"
+                style={{ textDecoration: 'none' }}
               >
+                {isActive && (
+                  <motion.div
+                    layoutId="nav-pill"
+                    className="absolute inset-0 rounded-lg"
+                    style={{ background: 'var(--accent-whisper)', border: '1px solid var(--accent-dim)' }}
+                    transition={{ type: 'spring', stiffness: 380, damping: 34 }}
+                  />
+                )}
                 <span
+                  className="relative"
                   style={{
                     fontSize: '12px',
                     color: isActive ? 'var(--accent)' : 'var(--foreground-subtle)',
@@ -284,6 +298,7 @@ export function Nav({ current }: { current: string }) {
                   {NAV_ICONS[href]}
                 </span>
                 <span
+                  className="relative"
                   style={{
                     fontFamily: 'var(--font-ui)',
                     fontSize: '9px',
@@ -296,16 +311,6 @@ export function Nav({ current }: { current: string }) {
                 >
                   {label}
                 </span>
-                {isActive && (
-                  <div
-                    style={{
-                      width: '16px',
-                      height: '1px',
-                      background: 'var(--accent)',
-                      opacity: 0.6,
-                    }}
-                  />
-                )}
               </a>
             )
           })}

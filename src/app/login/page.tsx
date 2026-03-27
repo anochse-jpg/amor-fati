@@ -130,7 +130,7 @@ function LoginPageInner() {
       if (error) { setError(error.message); setLoading(false); return }
       const { data: { user } } = await supabase.auth.getUser()
       const onboarded = user?.user_metadata?.onboarding_completed
-      router.push(onboarded ? '/morning' : '/onboarding')
+      router.push(onboarded ? '/home' : '/onboarding')
       router.refresh()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Unexpected error — please try again.')

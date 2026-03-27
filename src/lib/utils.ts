@@ -46,6 +46,30 @@ export function computeStreak(dates: string[]): number {
 }
 
 /**
+ * Computes the longest consecutive streak from an array of YYYY-MM-DD date strings.
+ */
+export function computeLongestStreak(dates: string[]): number {
+  const uniqueDates = [...new Set(dates)].sort()
+  if (uniqueDates.length === 0) return 0
+
+  let max = 1
+  let current = 1
+
+  for (let i = 1; i < uniqueDates.length; i++) {
+    const prev = new Date(uniqueDates[i - 1] + 'T00:00:00')
+    const curr = new Date(uniqueDates[i] + 'T00:00:00')
+    const diffDays = Math.round((curr.getTime() - prev.getTime()) / 86400000)
+    if (diffDays === 1) {
+      current++
+      if (current > max) max = current
+    } else {
+      current = 1
+    }
+  }
+  return max
+}
+
+/**
  * Selects a prompt index for a given category, avoiding repeats within
  * `cooldownDays`. Caches today's selection so the same prompt shows all day.
  */

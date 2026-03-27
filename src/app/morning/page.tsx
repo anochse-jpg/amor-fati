@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { motion, AnimatePresence } from 'motion/react'
 import { createClient } from '@/lib/supabase/client'
 import { Nav, ProgressBar } from '@/components/ui'
 import { JolyButton } from '@/components/ui/joly-button'
@@ -417,134 +418,145 @@ export default function MorningPage() {
           <ProgressBar total={steps.length + 1} current={step} />
         </div>
 
-        {/* Prompt card (steps 0–2) */}
-        {!isMoodStep && current && (
-          <div key={step} className="animate-fade-up delay-200">
-            <div
-              className="mb-6"
-              style={{
-                background: 'var(--card)',
-                border: '1px solid var(--border)',
-                borderRadius: '10px',
-                padding: '24px',
-              }}
+        {/* Step cards — animated transitions */}
+        <AnimatePresence mode="wait">
+          {!isMoodStep && current ? (
+            <motion.div
+              key={`step-${step}`}
+              initial={{ opacity: 0, x: 20, filter: 'blur(6px)' }}
+              animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+              exit={{ opacity: 0, x: -16, filter: 'blur(4px)' }}
+              transition={{ duration: 0.38, ease: [0.16, 1, 0.3, 1] }}
             >
-              <p
+              <div
+                className="mb-6"
                 style={{
-                  fontFamily: 'var(--font-ui)',
-                  fontSize: '10px',
-                  letterSpacing: '0.2em',
-                  color: 'var(--accent)',
-                  textTransform: 'uppercase',
-                  marginBottom: '1rem',
-                  opacity: 0.7,
+                  background: 'var(--card)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '10px',
+                  padding: '24px',
                 }}
               >
-                {current.label}
-              </p>
-              <h2
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '1.25rem',
-                  fontWeight: 400,
-                  color: 'var(--foreground)',
-                  lineHeight: 1.6,
-                  marginBottom: '1.5rem',
-                }}
-              >
-                {current.question}
-              </h2>
-
-              <div className="quote-accent mb-6">
-                <p
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontStyle: 'italic',
-                    fontSize: '0.875rem',
-                    color: 'var(--foreground-muted)',
-                    lineHeight: 1.8,
-                    fontWeight: 300,
-                  }}
-                >
-                  &ldquo;{current.quote.text}&rdquo;
-                </p>
                 <p
                   style={{
                     fontFamily: 'var(--font-ui)',
                     fontSize: '10px',
-                    letterSpacing: '0.12em',
+                    letterSpacing: '0.2em',
                     color: 'var(--accent)',
-                    opacity: 0.6,
-                    marginTop: '0.4rem',
                     textTransform: 'uppercase',
+                    marginBottom: '1rem',
+                    opacity: 0.7,
                   }}
                 >
-                  — {current.quote.author}
+                  {current.label}
                 </p>
+                <h2
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: '1.25rem',
+                    fontWeight: 400,
+                    color: 'var(--foreground)',
+                    lineHeight: 1.6,
+                    marginBottom: '1.5rem',
+                  }}
+                >
+                  {current.question}
+                </h2>
+
+                <div className="quote-accent mb-6">
+                  <p
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontStyle: 'italic',
+                      fontSize: '0.875rem',
+                      color: 'var(--foreground-muted)',
+                      lineHeight: 1.8,
+                      fontWeight: 300,
+                    }}
+                  >
+                    &ldquo;{current.quote.text}&rdquo;
+                  </p>
+                  <p
+                    style={{
+                      fontFamily: 'var(--font-ui)',
+                      fontSize: '10px',
+                      letterSpacing: '0.12em',
+                      color: 'var(--accent)',
+                      opacity: 0.6,
+                      marginTop: '0.4rem',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    — {current.quote.author}
+                  </p>
+                </div>
+
+                <FloatingLabelTextarea
+                  label="Write freely"
+                  value={answers[current.id as keyof typeof answers]}
+                  onChange={e => setAnswers(prev => ({ ...prev, [current.id]: e.target.value }))}
+                />
               </div>
-
-              <FloatingLabelTextarea
-                label="Write freely"
-                value={answers[current.id as keyof typeof answers]}
-                onChange={e => setAnswers(prev => ({ ...prev, [current.id]: e.target.value }))}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Mood step (step 3) */}
-        {isMoodStep && (
-          <div className="animate-fade-up delay-200">
-            <div
-              className="mb-6"
-              style={{
-                background: 'var(--card)',
-                border: '1px solid var(--border)',
-                borderRadius: '10px',
-                padding: '24px',
-              }}
+            </motion.div>
+          ) : isMoodStep ? (
+            <motion.div
+              key="mood-step"
+              initial={{ opacity: 0, x: 20, filter: 'blur(6px)' }}
+              animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+              exit={{ opacity: 0, x: -16, filter: 'blur(4px)' }}
+              transition={{ duration: 0.38, ease: [0.16, 1, 0.3, 1] }}
             >
-              <p
+              <div
+                className="mb-6"
                 style={{
-                  fontFamily: 'var(--font-ui)',
-                  fontSize: '10px',
-                  letterSpacing: '0.2em',
-                  color: 'var(--accent)',
-                  textTransform: 'uppercase',
-                  marginBottom: '1rem',
-                  opacity: 0.7,
+                  background: 'var(--card)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '10px',
+                  padding: '24px',
                 }}
               >
-                Morning mood
-              </p>
+                <p
+                  style={{
+                    fontFamily: 'var(--font-ui)',
+                    fontSize: '10px',
+                    letterSpacing: '0.2em',
+                    color: 'var(--accent)',
+                    textTransform: 'uppercase',
+                    marginBottom: '1rem',
+                    opacity: 0.7,
+                  }}
+                >
+                  Morning mood
+                </p>
 
-              <RatingInteraction onChange={setMood} className="mb-6" />
+                <RatingInteraction onChange={setMood} className="mb-6" />
 
-              <textarea
-                placeholder="Want to add more? (optional)"
-                value={moodNote}
-                onChange={e => setMoodNote(e.target.value)}
-                rows={3}
-                style={{
-                  width: '100%',
-                  padding: '12px 14px',
-                  background: 'var(--muted)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '8px',
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '1rem',
-                  color: 'var(--foreground)',
-                  lineHeight: 1.75,
-                  resize: 'none',
-                  outline: 'none',
-                  transition: 'border-color 0.15s ease',
-                }}
-                onFocus={e => { e.currentTarget.style.borderColor = 'var(--accent-dim)' }}
-                onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)' }}
-              />
-            </div>
-          </div>
-        )}
+                <textarea
+                  placeholder="Want to add more? (optional)"
+                  value={moodNote}
+                  onChange={e => setMoodNote(e.target.value)}
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    padding: '12px 14px',
+                    background: 'var(--muted)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '8px',
+                    fontFamily: 'var(--font-display)',
+                    fontSize: '1rem',
+                    color: 'var(--foreground)',
+                    lineHeight: 1.75,
+                    resize: 'none',
+                    outline: 'none',
+                    transition: 'border-color 0.15s ease',
+                  }}
+                  onFocus={e => { e.currentTarget.style.borderColor = 'var(--accent-dim)' }}
+                  onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)' }}
+                />
+              </div>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
 
         {/* Navigation */}
         <div className="flex justify-between items-center pt-2">
