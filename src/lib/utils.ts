@@ -22,6 +22,30 @@ export function getGreeting(): string {
 }
 
 /**
+ * Computes current streak from an array of YYYY-MM-DD date strings.
+ * Streak counts consecutive days ending today or yesterday.
+ */
+export function computeStreak(dates: string[]): number {
+  const uniqueDates = [...new Set(dates)].sort().reverse()
+  if (uniqueDates.length === 0) return 0
+
+  const today = new Date().toISOString().split('T')[0]
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0]
+
+  if (uniqueDates[0] !== today && uniqueDates[0] !== yesterday) return 0
+
+  let streak = 1
+  for (let i = 1; i < uniqueDates.length; i++) {
+    const curr = new Date(uniqueDates[i - 1] + 'T00:00:00')
+    const prev = new Date(uniqueDates[i] + 'T00:00:00')
+    const diffDays = Math.round((curr.getTime() - prev.getTime()) / 86400000)
+    if (diffDays === 1) streak++
+    else break
+  }
+  return streak
+}
+
+/**
  * Selects a prompt index for a given category, avoiding repeats within
  * `cooldownDays`. Caches today's selection so the same prompt shows all day.
  */

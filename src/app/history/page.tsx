@@ -2,9 +2,23 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import { motion } from 'motion/react'
 import { createClient } from '@/lib/supabase/client'
+import { computeStreak } from '@/lib/utils'
 import { Nav } from '@/components/ui'
 import { JolyButton } from '@/components/ui/joly-button'
+
+const listVariants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.1 } },
+}
+
+const DAY_EASE = [0.16, 1, 0.3, 1] as [number, number, number, number]
+
+const dayVariants = {
+  hidden: { opacity: 0, y: 14 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: DAY_EASE } },
+}
 
 interface Entry {
   id: string
@@ -53,26 +67,6 @@ function formatDate(dateStr: string) {
   return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 }
 
-function computeStreak(entries: Entry[]): number {
-  const uniqueDates = [...new Set(entries.map(e => e.entry_date))].sort().reverse()
-  if (uniqueDates.length === 0) return 0
-
-  const today = new Date().toISOString().split('T')[0]
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0]
-
-  if (uniqueDates[0] !== today && uniqueDates[0] !== yesterday) return 0
-
-  let streak = 1
-  for (let i = 1; i < uniqueDates.length; i++) {
-    const curr = new Date(uniqueDates[i - 1] + 'T00:00:00')
-    const prev = new Date(uniqueDates[i] + 'T00:00:00')
-    const diffDays = Math.round((curr.getTime() - prev.getTime()) / 86400000)
-    if (diffDays === 1) streak++
-    else break
-  }
-  return streak
-}
-
 export default function HistoryPage() {
   const router = useRouter()
   const [entries, setEntries] = useState<Entry[]>([])
@@ -80,6 +74,35 @@ export default function HistoryPage() {
   const [selected, setSelected] = useState<Entry | null>(null)
   const [filter, setFilter] = useState<FilterType>('all')
   const [sortDesc, setSortDesc] = useState(true)
+  const [search, setSearch] = useState('')
+  const [dateFilter, setDateFilter] = useState('')
+  const [dateInput, setDateInput] = useState('')
+  const [searchFocused, setSearchFocused] = useState(false)
+
+  function handleDateInput(val: string) {
+    // Auto-format: insert slashes after dd and mm as user types
+    const digits = val.replace(/\D/g, '').slice(0, 8)
+    let formatted = digits
+    if (digits.length > 2) formatted = `${digits.slice(0, 2)}/${digits.slice(2)}`
+    if (digits.length > 4) formatted = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`
+    setDateInput(formatted)
+
+    // Parse to YYYY-MM-DD once fully entered
+    if (digits.length === 8) {
+      const dd = digits.slice(0, 2), mm = digits.slice(2, 4), yyyy = digits.slice(4)
+      const d = parseInt(dd), m = parseInt(mm), y = parseInt(yyyy)
+      if (d >= 1 && d <= 31 && m >= 1 && m <= 12 && y >= 2000 && y <= 2099) {
+        setDateFilter(`${yyyy}-${mm}-${dd}`)
+        return
+      }
+    }
+    setDateFilter('')
+  }
+
+  function clearDate() {
+    setDateInput('')
+    setDateFilter('')
+  }
 
   useEffect(() => {
     async function load() {
@@ -91,13 +114,18 @@ export default function HistoryPage() {
         return
       }
 
+      // Fetch at least 365 days of entries (up to 2000 to cover power users)
+      const oneYearAgo = new Date()
+      oneYearAgo.setDate(oneYearAgo.getDate() - 365)
+
       const { data } = await supabase
         .from('journal_entries')
         .select('*')
         .eq('user_id', user.id)
+        .gte('entry_date', oneYearAgo.toISOString().split('T')[0])
         .order('entry_date', { ascending: false })
         .order('created_at', { ascending: true })
-        .limit(1000)
+        .limit(2000)
 
       setEntries(data || [])
       setLoading(false)
@@ -105,11 +133,18 @@ export default function HistoryPage() {
     load()
   }, [router])
 
-  const streak = useMemo(() => computeStreak(entries), [entries])
+  const streak = useMemo(() => computeStreak(entries.map(e => e.entry_date)), [entries])
 
   // Filter then sort by date direction
   const groupedArray = useMemo(() => {
-    const filtered = filter === 'all' ? entries : entries.filter(e => e.type === filter)
+    const q = search.toLowerCase().trim()
+    const filtered = entries
+      .filter(e => filter === 'all' || e.type === filter)
+      .filter(e => !dateFilter || e.entry_date === dateFilter)
+      .filter(e => {
+        if (!q) return true
+        return Object.values(e.content).some(v => typeof v === 'string' && v.toLowerCase().includes(q))
+      })
 
     const groups: Record<string, Entry[]> = {}
     filtered.forEach(entry => {
@@ -126,7 +161,7 @@ export default function HistoryPage() {
     return Object.entries(groups).sort(([a], [b]) =>
       sortDesc ? b.localeCompare(a) : a.localeCompare(b)
     )
-  }, [entries, filter, sortDesc])
+  }, [entries, filter, sortDesc, search, dateFilter])
 
   const totalFiltered = groupedArray.reduce((sum, [, day]) => sum + day.length, 0)
 
@@ -300,6 +335,164 @@ export default function HistoryPage() {
           </div>
         </div>
 
+        {/* Search + date filter */}
+        <div
+          className="animate-fade-up delay-100"
+          style={{ marginBottom: '1rem' }}
+          onFocus={() => setSearchFocused(true)}
+          onBlur={e => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+              setSearchFocused(false)
+            }
+          }}
+        >
+          {/* Search bar */}
+          <div style={{ position: 'relative' }}>
+            <span style={{
+              position: 'absolute',
+              left: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'var(--foreground-subtle)',
+              opacity: 0.4,
+              fontSize: '12px',
+              pointerEvents: 'none',
+            }}>
+              ⌕
+            </span>
+            <input
+              type="text"
+              placeholder="Search entries…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{
+                width: '100%',
+                background: 'var(--card)',
+                border: `1px solid ${searchFocused || dateFilter ? 'var(--accent-dim)' : 'var(--border)'}`,
+                borderRadius: searchFocused ? '8px 8px 0 0' : '8px',
+                padding: '9px 12px 9px 30px',
+                fontFamily: 'var(--font-ui)',
+                fontSize: '12px',
+                color: 'var(--foreground)',
+                outline: 'none',
+                transition: 'border-color 0.15s ease, border-radius 0.15s ease',
+              }}
+            />
+            {/* Active date badge */}
+            {dateFilter && !searchFocused && (
+              <button
+                onMouseDown={e => e.preventDefault()}
+                onClick={clearDate}
+                style={{
+                  position: 'absolute',
+                  right: '10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  background: 'var(--card)',
+                  border: '1px solid var(--accent-dim)',
+                  borderRadius: '12px',
+                  padding: '2px 8px',
+                  cursor: 'pointer',
+                  fontFamily: 'var(--font-ui)',
+                  fontSize: '10px',
+                  color: 'var(--accent)',
+                  letterSpacing: '0.06em',
+                }}
+              >
+                {dateInput} ×
+              </button>
+            )}
+            {/* Clear text search */}
+            {search && !dateFilter && (
+              <button
+                onClick={() => setSearch('')}
+                style={{
+                  position: 'absolute',
+                  right: '10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--foreground-subtle)',
+                  opacity: 0.5,
+                  fontSize: '14px',
+                  lineHeight: 1,
+                  padding: '2px',
+                }}
+              >
+                ×
+              </button>
+            )}
+          </div>
+
+          {/* Date input — visible only when search is focused */}
+          {searchFocused && (
+            <div
+              style={{
+                background: 'var(--card)',
+                border: '1px solid var(--accent-dim)',
+                borderTop: 'none',
+                borderRadius: '0 0 8px 8px',
+                padding: '10px 12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+              }}
+            >
+              <span style={{
+                fontFamily: 'var(--font-ui)',
+                fontSize: '9px',
+                letterSpacing: '0.16em',
+                textTransform: 'uppercase',
+                color: 'var(--foreground-subtle)',
+                opacity: 0.45,
+                whiteSpace: 'nowrap',
+              }}>
+                Date
+              </span>
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="DD/MM/YYYY"
+                value={dateInput}
+                onChange={e => handleDateInput(e.target.value)}
+                style={{
+                  flex: 1,
+                  background: 'transparent',
+                  border: 'none',
+                  outline: 'none',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '12px',
+                  color: dateFilter ? 'var(--accent)' : 'var(--foreground)',
+                  letterSpacing: '0.08em',
+                }}
+              />
+              {dateInput && (
+                <button
+                  onMouseDown={e => e.preventDefault()}
+                  onClick={clearDate}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: 'var(--foreground-subtle)',
+                    opacity: 0.5,
+                    fontSize: '14px',
+                    lineHeight: 1,
+                    padding: '0 2px',
+                  }}
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Filter tabs + sort toggle */}
         <div
           className="animate-fade-up delay-100"
@@ -426,9 +619,14 @@ export default function HistoryPage() {
             </button>
           </div>
         ) : (
-          <div className="animate-fade-up delay-100" style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+          <motion.div
+            variants={listVariants}
+            initial="hidden"
+            animate="show"
+            style={{ display: 'flex', flexDirection: 'column', gap: '0' }}
+          >
             {groupedArray.map(([date, dayEntries]) => (
-              <div key={date} style={{ marginBottom: '2rem' }}>
+              <motion.div key={date} variants={dayVariants} style={{ marginBottom: '2rem' }}>
                 {/* Date heading */}
                 <div
                   style={{
@@ -542,7 +740,7 @@ export default function HistoryPage() {
                     )
                   })}
                 </div>
-              </div>
+              </motion.div>
             ))}
 
             {/* Footer */}
@@ -559,7 +757,7 @@ export default function HistoryPage() {
               {totalFiltered} entr{totalFiltered === 1 ? 'y' : 'ies'}
               {filter !== 'all' ? ` · ${filter} only` : ' · all time'}
             </p>
-          </div>
+          </motion.div>
         )}
       </div>
       <Nav current="/history" />
