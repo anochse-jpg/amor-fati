@@ -124,25 +124,33 @@ function LoginPageInner() {
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true); setError('')
-    const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) { setError(error.message); setLoading(false); return }
-    const { data: { user } } = await supabase.auth.getUser()
-    const onboarded = user?.user_metadata?.onboarding_completed
-    router.push(onboarded ? '/morning' : '/onboarding')
-    router.refresh()
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) { setError(error.message); setLoading(false); return }
+      const { data: { user } } = await supabase.auth.getUser()
+      const onboarded = user?.user_metadata?.onboarding_completed
+      router.push(onboarded ? '/morning' : '/onboarding')
+      router.refresh()
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unexpected error — please try again.')
+      setLoading(false)
+    }
   }
 
   async function handleOAuth(provider: 'google') {
     setOauthLoading(provider)
-    const supabase = createClient()
-    // Use NEXT_PUBLIC_SITE_URL if set (ensures the redirect URL matches exactly
-    // what is registered in Supabase). Falls back to window.location.origin.
-    const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? window.location.origin
-    await supabase.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: `${base}/auth/callback` },
-    })
+    try {
+      const supabase = createClient()
+      const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? window.location.origin
+      await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: `${base}/auth/callback` },
+      })
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unexpected error — please try again.')
+      setOauthLoading(null)
+    }
   }
 
   async function handleForgotPassword(e: React.FormEvent) {

@@ -8,9 +8,16 @@ function safeFetch(input: RequestInfo | URL, init?: RequestInit) {
 }
 
 export function createClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { global: { fetch: safeFetch } }
-  )
+  // Trim to guard against accidental whitespace/newlines in env vars,
+  // which cause fetch to throw "Invalid value" when used in headers or URLs.
+  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim().replace(/\/$/, '')
+  const key = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '').trim()
+
+  if (!url || !key) {
+    throw new Error(
+      'Missing Supabase env vars. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY, then redeploy.'
+    )
+  }
+
+  return createBrowserClient(url, key, { global: { fetch: safeFetch } })
 }

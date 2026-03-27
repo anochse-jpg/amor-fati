@@ -131,13 +131,18 @@ export default function SignupPage() {
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true); setError('')
-    const supabase = createClient()
-    const { error } = await supabase.auth.signUp({
-      email, password,
-      options: { emailRedirectTo: `${window.location.origin}/onboarding` },
-    })
-    if (error) { setError(error.message); setLoading(false) }
-    else { setSuccess(true) }
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.auth.signUp({
+        email, password,
+        options: { emailRedirectTo: `${window.location.origin}/onboarding` },
+      })
+      if (error) { setError(error.message); setLoading(false) }
+      else { setSuccess(true) }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unexpected error — please try again.')
+      setLoading(false)
+    }
   }
 
   async function handleOAuth(provider: 'google' | 'github') {
