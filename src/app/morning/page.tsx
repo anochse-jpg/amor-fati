@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import { createClient } from '@/lib/supabase/client'
 import { Nav, ProgressBar } from '@/components/ui'
 import { JolyButton } from '@/components/ui/joly-button'
+import { CompletionCard } from '@/components/ui/completion-card'
 import { FloatingLabelTextarea } from '@/components/ui/textarea-with-floating-label'
 import { RatingInteraction } from '@/components/ui/emoji-rating'
 import { useTimeOfDay } from '@/hooks/useTimeOfDay'
@@ -266,79 +267,17 @@ export default function MorningPage() {
   if (saved) {
     return (
       <main className="min-h-screen flex flex-col items-center justify-center px-6 pb-20">
-        <div className="max-w-md w-full text-center animate-fade-up">
-          <div
-            className="w-12 h-12 mx-auto mb-8 flex items-center justify-center rounded-full"
-            style={{ border: '1px solid var(--accent-dim)' }}
-          >
-            <span style={{ color: 'var(--accent)', fontSize: '18px' }}>✓</span>
-          </div>
-
-          <h2
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: '2rem',
-              fontWeight: 400,
-              color: 'var(--foreground)',
-              marginBottom: '0.75rem',
-            }}
-          >
-            Morning set.
-          </h2>
-          <p
-            style={{
-              fontFamily: 'var(--font-ui)',
-              fontSize: '13px',
-              color: 'var(--foreground-subtle)',
-              marginBottom: '2.5rem',
-              lineHeight: 1.7,
-            }}
-          >
-            Your intention is planted. Now go live it.
-          </p>
-
-          <div
-            style={{
-              borderTop: '1px solid var(--border)',
-              paddingTop: '1.5rem',
-              marginBottom: '2rem',
-            }}
-          >
-            <p
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontStyle: 'italic',
-                fontSize: '0.9rem',
-                color: 'var(--foreground-subtle)',
-                lineHeight: 1.8,
-              }}
-            >
-              Confine yourself to the present.
-            </p>
-            <p
-              style={{
-                fontFamily: 'var(--font-ui)',
-                fontSize: '10px',
-                letterSpacing: '0.14em',
-                color: 'var(--foreground-subtle)',
-                opacity: 0.5,
-                marginTop: '0.4rem',
-                textTransform: 'uppercase',
-              }}
-            >
-              Marcus Aurelius
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-3">
-            <JolyButton variant="outline" size="lg" asChild>
-              <a href="/practice">Today&apos;s practice</a>
-            </JolyButton>
-            <JolyButton variant="ghost" asChild>
-              <a href="/history">View past entries →</a>
-            </JolyButton>
-          </div>
-        </div>
+        <CompletionCard
+          heading="Morning set."
+          subheading="Your intention is planted. Now go live it."
+          echoLabel="Your intention"
+          echoContent={answers.intention}
+          quote={{ text: 'Confine yourself to the present.', author: 'Marcus Aurelius' }}
+          ctas={[
+            { label: "Today's practice", href: '/practice', variant: 'outline' },
+            { label: 'View past entries →', href: '/history', variant: 'ghost' },
+          ]}
+        />
         <Nav current="/morning" />
       </main>
     )

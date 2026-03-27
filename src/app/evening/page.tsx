@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import { createClient } from '@/lib/supabase/client'
 import { Nav, ProgressBar } from '@/components/ui'
 import { JolyButton } from '@/components/ui/joly-button'
+import { CompletionCard } from '@/components/ui/completion-card'
 import { FloatingLabelTextarea } from '@/components/ui/textarea-with-floating-label'
 import { RatingInteraction } from '@/components/ui/emoji-rating'
 import { useTimeOfDay } from '@/hooks/useTimeOfDay'
@@ -252,75 +253,17 @@ export default function EveningPage() {
   if (saved) {
     return (
       <main className="min-h-screen flex flex-col items-center justify-center px-6 pb-20">
-        <div className="max-w-md w-full text-center animate-fade-up">
-          <div
-            className="w-12 h-12 mx-auto mb-8 flex items-center justify-center rounded-full"
-            style={{ border: '1px solid var(--accent-dim)' }}
-          >
-            <span style={{ color: 'var(--accent)', fontSize: '18px' }}>✓</span>
-          </div>
-          <h2
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: '2rem',
-              fontWeight: 400,
-              color: 'var(--foreground)',
-              marginBottom: '0.75rem',
-            }}
-          >
-            Day complete.
-          </h2>
-          <p
-            style={{
-              fontFamily: 'var(--font-ui)',
-              fontSize: '13px',
-              color: 'var(--foreground-subtle)',
-              marginBottom: '2.5rem',
-              lineHeight: 1.7,
-            }}
-          >
-            You examined your day. That is the practice.
-          </p>
-
-          <div
-            className="text-left"
-            style={{
-              borderLeft: '1.5px solid var(--accent-dim)',
-              paddingLeft: '1.25rem',
-              marginBottom: '2.5rem',
-            }}
-          >
-            <p
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontStyle: 'italic',
-                fontSize: '0.9rem',
-                color: 'var(--foreground-subtle)',
-                lineHeight: 1.8,
-              }}
-            >
-              Let us prepare our minds as if we had come to the very end of life.
-              Let us postpone nothing.
-            </p>
-            <p
-              style={{
-                fontFamily: 'var(--font-ui)',
-                fontSize: '10px',
-                letterSpacing: '0.14em',
-                color: 'var(--foreground-subtle)',
-                opacity: 0.5,
-                marginTop: '0.4rem',
-                textTransform: 'uppercase',
-              }}
-            >
-              Seneca
-            </p>
-          </div>
-
-          <JolyButton variant="outline" size="lg" asChild>
-            <a href="/history">View your journal</a>
-          </JolyButton>
-        </div>
+        <CompletionCard
+          heading="Day complete."
+          subheading="You examined your day. That is the practice."
+          echoLabel="Your lesson"
+          echoContent={answers.lesson}
+          quote={{ text: 'Let us prepare our minds as if we had come to the very end of life. Let us postpone nothing.', author: 'Seneca' }}
+          ctas={[
+            { label: 'View your journal', href: '/history', variant: 'outline' },
+            { label: 'See insights →', href: '/insights', variant: 'ghost' },
+          ]}
+        />
         <Nav current="/evening" />
       </main>
     )

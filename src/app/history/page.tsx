@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { computeStreak } from '@/lib/utils'
 import { Nav } from '@/components/ui'
 import { JolyButton } from '@/components/ui/joly-button'
+import { CalendarHeatmapView } from '@/components/ui/calendar-heatmap-view'
 
 const listVariants = {
   hidden: {},
@@ -58,6 +59,17 @@ const FILTERS: { label: string; value: FilterType }[] = [
   { label: '◈  Practice', value: 'practice' },
 ]
 
+function relativeTime(createdAt: string): string {
+  const diff = Date.now() - new Date(createdAt).getTime()
+  const mins = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+  if (mins < 60) return `${mins}m ago`
+  if (hours < 24) return `${hours}h ago`
+  if (days < 7) return `${days}d ago`
+  return new Date(createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
 function formatDate(dateStr: string) {
   const date = new Date(dateStr + 'T00:00:00')
   const today = new Date().toISOString().split('T')[0]
@@ -78,6 +90,12 @@ export default function HistoryPage() {
   const [dateFilter, setDateFilter] = useState('')
   const [dateInput, setDateInput] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
+  const [view, setView] = useState<'list' | 'calendar'>('list')
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  })
+  const [calendarDate, setCalendarDate] = useState<string | null>(null)
 
   function handleDateInput(val: string) {
     // Auto-format: insert slashes after dd and mm as user types
@@ -335,8 +353,50 @@ export default function HistoryPage() {
           </div>
         </div>
 
-        {/* Search + date filter */}
-        <div
+        {/* List / Calendar toggle */}
+        <div className="animate-fade-up delay-100" style={{ display: 'flex', gap: '6px', marginBottom: '1.25rem' }}>
+          {(['list', 'calendar'] as const).map(v => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              style={{
+                fontFamily: 'var(--font-ui)',
+                fontSize: '10px',
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                padding: '5px 14px',
+                borderRadius: '20px',
+                border: view === v ? '1px solid var(--accent)' : '1px solid var(--border)',
+                background: view === v ? 'var(--accent)' : 'transparent',
+                color: view === v ? '#0c0b0a' : 'var(--foreground-subtle)',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              {v === 'list' ? '◫  List' : '◻  Calendar'}
+            </button>
+          ))}
+        </div>
+
+        {/* Calendar view */}
+        {view === 'calendar' && (
+          <div
+            className="animate-fade-up"
+            style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '10px', padding: '20px', marginBottom: '1.5rem' }}
+          >
+            <CalendarHeatmapView
+              entries={entries}
+              month={calendarMonth}
+              onMonthChange={setCalendarMonth}
+              selectedDate={calendarDate}
+              onSelectDate={setCalendarDate}
+              onOpenEntry={setSelected}
+            />
+          </div>
+        )}
+
+        {/* Search + date filter — list view only */}
+        {view === 'list' && <div
           className="animate-fade-up delay-100"
           style={{ marginBottom: '1rem' }}
           onFocus={() => setSearchFocused(true)}
@@ -491,9 +551,10 @@ export default function HistoryPage() {
               )}
             </div>
           )}
-        </div>
+        </div>}
 
-        {/* Filter tabs + sort toggle */}
+        {/* Filter tabs + sort toggle — list view only */}
+        {view === 'list' && <>
         <div
           className="animate-fade-up delay-100"
           style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '1.5rem', flexWrap: 'wrap' }}
@@ -625,123 +686,107 @@ export default function HistoryPage() {
             animate="show"
             style={{ display: 'flex', flexDirection: 'column', gap: '0' }}
           >
-            {groupedArray.map(([date, dayEntries]) => (
-              <motion.div key={date} variants={dayVariants} style={{ marginBottom: '2rem' }}>
-                {/* Date heading */}
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    marginBottom: '10px',
-                  }}
-                >
-                  <p
-                    style={{
-                      fontFamily: 'var(--font-ui)',
-                      fontSize: '10px',
-                      letterSpacing: '0.14em',
-                      color: 'var(--foreground-subtle)',
-                      textTransform: 'uppercase',
-                      opacity: 0.5,
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {formatDate(date)}
-                  </p>
-                  <div style={{ flex: 1, height: '1px', background: 'var(--border)', opacity: 0.5 }} />
-                </div>
+            {groupedArray.map(([date, dayEntries]) => {
+              const dayMood = dayEntries
+                .map(e => e.mood_score)
+                .filter(Boolean)
+                .sort((a, b) => (b ?? 0) - (a ?? 0))[0]
 
-                {/* Entries for that day */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {dayEntries.map(entry => {
-                    const firstKey = Object.keys(entry.content)[0]
-                    const firstLabel = firstKey ? CONTENT_LABELS[firstKey] : null
-                    const firstValue = firstKey ? entry.content[firstKey] : null
+              return (
+                <motion.div key={date} variants={dayVariants} style={{ marginBottom: '2rem' }}>
+                  {/* Date heading — richer: date + entry count + top mood */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                    <p
+                      style={{
+                        fontFamily: 'var(--font-ui)',
+                        fontSize: '10px',
+                        letterSpacing: '0.14em',
+                        color: 'var(--foreground-subtle)',
+                        textTransform: 'uppercase',
+                        opacity: 0.5,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {formatDate(date)}
+                    </p>
+                    {dayMood && (
+                      <span style={{ fontSize: '11px', opacity: 0.7 }}>{MOOD_LABELS[dayMood]}</span>
+                    )}
+                    <span
+                      style={{
+                        fontFamily: 'var(--font-ui)',
+                        fontSize: '9px',
+                        color: 'var(--foreground-subtle)',
+                        opacity: 0.3,
+                        letterSpacing: '0.08em',
+                      }}
+                    >
+                      {dayEntries.length} {dayEntries.length === 1 ? 'entry' : 'entries'}
+                    </span>
+                    <div style={{ flex: 1, height: '1px', background: 'var(--border)', opacity: 0.5 }} />
+                  </div>
 
-                    return (
+                  {/* Entries for that day */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {dayEntries.map(entry => (
                       <button
                         key={entry.id}
                         onClick={() => setSelected(entry)}
-                        className="w-full text-left transition-all duration-200 cursor-pointer group"
+                        className="w-full text-left cursor-pointer group"
                         style={{
                           background: 'var(--card)',
                           border: '1px solid var(--border)',
                           borderRadius: '6px',
                           padding: '14px 16px',
+                          transition: 'border-color 0.15s ease',
                         }}
                         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent-dim)' }}
                         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)' }}
                       >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                              <span
-                                style={{
-                                  fontFamily: 'var(--font-ui)',
-                                  fontSize: '9px',
-                                  letterSpacing: '0.18em',
-                                  color: 'var(--accent)',
-                                  textTransform: 'uppercase',
-                                  opacity: 0.7,
-                                }}
-                              >
-                                {TYPE_ICONS[entry.type]} {entry.type}
-                              </span>
-                              {entry.mood_score && (
-                                <span style={{ fontSize: '12px' }}>{MOOD_LABELS[entry.mood_score]}</span>
-                              )}
-                              {firstLabel && (
-                                <span
-                                  style={{
-                                    fontFamily: 'var(--font-ui)',
-                                    fontSize: '9px',
-                                    letterSpacing: '0.1em',
-                                    color: 'var(--foreground-subtle)',
-                                    opacity: 0.4,
-                                    textTransform: 'uppercase',
-                                  }}
-                                >
-                                  · {firstLabel}
-                                </span>
-                              )}
-                            </div>
-                            {firstValue && (
+                        {/* Type + mood + relative time */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                          <span style={{ fontFamily: 'var(--font-ui)', fontSize: '9px', letterSpacing: '0.18em', color: 'var(--accent)', textTransform: 'uppercase', opacity: 0.7 }}>
+                            {TYPE_ICONS[entry.type]} {entry.type}
+                          </span>
+                          {entry.mood_score && (
+                            <span style={{ fontSize: '12px' }}>{MOOD_LABELS[entry.mood_score]}</span>
+                          )}
+                          <span style={{ fontFamily: 'var(--font-ui)', fontSize: '9px', color: 'var(--foreground-subtle)', opacity: 0.3, marginLeft: 'auto', letterSpacing: '0.04em' }}>
+                            {relativeTime(entry.created_at)}
+                          </span>
+                        </div>
+
+                        {/* All content fields as snippets */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          {Object.entries(entry.content).map(([key, value]) =>
+                            value ? (
                               <p
+                                key={key}
                                 style={{
                                   fontFamily: 'var(--font-display)',
-                                  fontSize: '0.875rem',
+                                  fontSize: '0.85rem',
                                   color: 'var(--foreground-muted)',
                                   lineHeight: 1.5,
                                   overflow: 'hidden',
                                   display: '-webkit-box',
-                                  WebkitLineClamp: 2,
+                                  WebkitLineClamp: 1,
                                   WebkitBoxOrient: 'vertical',
                                 }}
                               >
-                                {firstValue}
+                                <span style={{ fontFamily: 'var(--font-ui)', fontSize: '8px', letterSpacing: '0.12em', textTransform: 'uppercase', opacity: 0.4, marginRight: '4px' }}>
+                                  {CONTENT_LABELS[key] ?? key} ·
+                                </span>
+                                {value}
                               </p>
-                            )}
-                          </div>
-                          <span
-                            style={{
-                              color: 'var(--foreground-subtle)',
-                              opacity: 0.3,
-                              marginLeft: '12px',
-                              fontSize: '12px',
-                              flexShrink: 0,
-                            }}
-                            className="group-hover:opacity-60 transition-opacity"
-                          >
-                            →
-                          </span>
+                            ) : null
+                          )}
                         </div>
                       </button>
-                    )
-                  })}
-                </div>
-              </motion.div>
-            ))}
+                    ))}
+                  </div>
+                </motion.div>
+              )
+            })}
 
             {/* Footer */}
             <p
@@ -759,6 +804,7 @@ export default function HistoryPage() {
             </p>
           </motion.div>
         )}
+        </>}
       </div>
       <Nav current="/history" />
     </main>
