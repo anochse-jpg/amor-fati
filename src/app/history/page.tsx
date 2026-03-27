@@ -45,6 +45,14 @@ const CONTENT_LABELS: Record<string, string> = {
   what_i_control: 'What I control',
   what_i_dont_control: "What I don't control",
   action: 'The action',
+  blessing: 'A blessing',
+  absence: 'Imagined absence',
+  return: 'Returning',
+  gratitude_action: 'Gratitude action',
+  endeavor: 'The endeavor',
+  obstacles: 'Obstacles',
+  responses: 'Responses',
+  preparation: 'Preparation',
 }
 
 // Morning first, then evening, then practice within each day
@@ -606,49 +614,110 @@ export default function HistoryPage() {
 
         {/* Empty state */}
         {entries.length === 0 ? (
-          <div className="text-center py-20 animate-fade-up delay-100">
-            <div
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '50%',
-                border: '1px solid var(--border)',
-                margin: '0 auto 1.5rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <span style={{ color: 'var(--foreground-subtle)', fontSize: '14px' }}>◫</span>
-            </div>
+          <div className="animate-fade-up delay-100">
             <p
               style={{
                 fontFamily: 'var(--font-display)',
-                fontSize: '1.1rem',
+                fontSize: '1rem',
                 color: 'var(--foreground-muted)',
-                marginBottom: '0.5rem',
+                marginBottom: '1.5rem',
+                opacity: 0.7,
               }}
             >
-              No entries yet.
+              Your practice begins here.
             </p>
-            <p
-              style={{
-                fontFamily: 'var(--font-ui)',
-                fontSize: '12px',
-                color: 'var(--foreground-subtle)',
-                marginBottom: '2rem',
-                opacity: 0.6,
-              }}
-            >
-              Begin today&apos;s practice to see your entries here.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '260px', margin: '0 auto' }}>
-              <JolyButton asChild>
-                <a href="/morning">Morning reflection</a>
-              </JolyButton>
-              <JolyButton variant="outline" asChild>
-                <a href="/evening">Evening reflection</a>
-              </JolyButton>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {[
+                {
+                  icon: '◐',
+                  type: 'Morning',
+                  heading: 'Begin with the morning',
+                  body: 'Set an intention. Name an obstacle. Find one thing to be grateful for.',
+                  href: '/morning',
+                },
+                {
+                  icon: '◑',
+                  type: 'Evening',
+                  heading: 'Close the day with reflection',
+                  body: 'What went well. Where you fell short. What you learned.',
+                  href: '/evening',
+                },
+                {
+                  icon: '◈',
+                  type: 'Practice',
+                  heading: 'Try a Stoic exercise',
+                  body: 'Work through the Dichotomy of Control — the foundational practice of Epictetus.',
+                  href: '/practice',
+                },
+              ].map(card => (
+                <a
+                  key={card.href}
+                  href={card.href}
+                  style={{
+                    display: 'block',
+                    background: 'var(--card)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '10px',
+                    padding: '18px 20px',
+                    textDecoration: 'none',
+                    transition: 'border-color 0.15s ease',
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent-dim)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
+                    <span
+                      style={{
+                        fontFamily: 'var(--font-ui)',
+                        fontSize: '16px',
+                        color: 'var(--accent)',
+                        opacity: 0.6,
+                        marginTop: '2px',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {card.icon}
+                    </span>
+                    <div>
+                      <p
+                        style={{
+                          fontFamily: 'var(--font-ui)',
+                          fontSize: '9px',
+                          letterSpacing: '0.16em',
+                          textTransform: 'uppercase',
+                          color: 'var(--accent)',
+                          opacity: 0.6,
+                          marginBottom: '4px',
+                        }}
+                      >
+                        {card.type}
+                      </p>
+                      <p
+                        style={{
+                          fontFamily: 'var(--font-display)',
+                          fontSize: '1rem',
+                          color: 'var(--foreground)',
+                          fontWeight: 400,
+                          marginBottom: '6px',
+                        }}
+                      >
+                        {card.heading}
+                      </p>
+                      <p
+                        style={{
+                          fontFamily: 'var(--font-ui)',
+                          fontSize: '11px',
+                          color: 'var(--foreground-subtle)',
+                          lineHeight: 1.6,
+                          opacity: 0.7,
+                        }}
+                      >
+                        {card.body}
+                      </p>
+                    </div>
+                  </div>
+                </a>
+              ))}
             </div>
           </div>
         ) : groupedArray.length === 0 ? (
