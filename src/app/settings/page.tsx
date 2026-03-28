@@ -7,18 +7,22 @@ import { createClient } from '@/lib/supabase/client'
 import { Nav } from '@/components/ui'
 import { useTheme } from '@/components/ThemeProvider'
 import { JolyButton } from '@/components/ui/joly-button'
+import { InfoBubble } from '@/components/ui/info-bubble'
+import { useAccessibility } from '@/components/AccessibilityProvider'
 import {
-  Moon, Sun, Bell, BellOff, Download, LogOut, Trash2,
+  Moon, Sun, Monitor, Bell, BellOff, Download, LogOut, Trash2,
   Shield, FileText, ChevronRight, Check, Edit2,
-  Mail, Key, Calendar, ChevronDown, AlertTriangle,
+  Mail, Key, Calendar, ChevronDown, AlertTriangle, Eye, Type,
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface NotifPrefs {
-  morningEnabled: boolean
+  morningEnabled: boolean       // master toggle (shows expanded section)
+  morningBrowserEnabled: boolean
   morningTime: string
-  eveningEnabled: boolean
+  eveningEnabled: boolean       // master toggle (shows expanded section)
+  eveningBrowserEnabled: boolean
   eveningTime: string
   emailMorningEnabled: boolean
   emailEveningEnabled: boolean
@@ -26,8 +30,10 @@ interface NotifPrefs {
 
 const DEFAULT_PREFS: NotifPrefs = {
   morningEnabled: false,
+  morningBrowserEnabled: false,
   morningTime: '07:00',
   eveningEnabled: false,
+  eveningBrowserEnabled: false,
   eveningTime: '20:30',
   emailMorningEnabled: false,
   emailEveningEnabled: false,
@@ -86,6 +92,40 @@ function sendPrefsToSW(prefs: NotifPrefs) {
   navigator.serviceWorker.ready.then(reg => {
     reg.active?.postMessage({ type: 'SET_NOTIFICATION_PREFS', prefs })
   })
+}
+
+// ─── Markdown Export ──────────────────────────────────────────────────────────
+
+function exportToMarkdown(entries: Record<string, unknown>[], userEmail: string) {
+  const formatEntry = (e: Record<string, unknown>) => {
+    const content = e.content as Record<string, string> | null
+    const date = new Date(e.entry_date as string).toLocaleDateString('en-US', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+    })
+    const type = (e.type as string) === 'morning' ? 'Morning Practice' : 'Evening Reflection'
+    const moodStr = e.mood_score != null ? `\n**Mood:** ${e.mood_score}/5\n` : ''
+
+    const fields = content ? Object.entries(content)
+      .filter(([k]) => k !== 'mood_note')
+      .map(([k, v]) => `\n**${k.charAt(0).toUpperCase() + k.slice(1)}**\n${v ?? ''}\n`)
+      .join('') : ''
+
+    const moodNote = content?.mood_note ? `\n**Note**\n${content.mood_note}\n` : ''
+
+    return `---\n\n### ${type} — ${date}\n${moodStr}${fields}${moodNote}`
+  }
+
+  const header = `# Amor Fati — Journal Export\n\n*${entries.length} entries · Exported ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}*\n\n*${userEmail}*\n`
+  const body = entries.map(e => formatEntry(e)).join('\n')
+  const md = `${header}\n${body}\n`
+
+  const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `amor-fati-journal-${new Date().toISOString().slice(0, 10)}.md`
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 // ─── PDF Export ───────────────────────────────────────────────────────────────
@@ -513,12 +553,14 @@ function DeleteModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel:
 export default function SettingsPage() {
   const router = useRouter()
   const { theme, setTheme } = useTheme()
+  const { textMagnify, setTextMagnify } = useAccessibility()
 
   const [user, setUser] = useState<{ email: string; id: string; createdAt: string; displayName: string } | null>(null)
   const [stats, setStats] = useState<Stats>({ total: 0, streak: 0, lastDate: null })
   const [prefs, setPrefs] = useState<NotifPrefs>(DEFAULT_PREFS)
   const [permission, setPermission] = useState<NotificationPermission>('default')
   const [prefsSaved, setPrefsSaved] = useState(false)
+  const [emailError, setEmailError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   // Profile panel
@@ -541,6 +583,7 @@ export default function SettingsPage() {
 
   // Export
   const [exporting, setExporting] = useState(false)
+  const [exportingMd, setExportingMd] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -562,7 +605,19 @@ export default function SettingsPage() {
       setStats({ total: dates.length, streak: calcStreak(dates), lastDate: dates[0] ?? null })
 
       const stored = localStorage.getItem('amor-fati-notification-prefs')
-      if (stored) { try { setPrefs(JSON.parse(stored)) } catch { /* ignore */ } }
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored)
+          // Migrate old prefs: morningEnabled used to mean browser-on
+          if (parsed.morningBrowserEnabled === undefined) {
+            parsed.morningBrowserEnabled = parsed.morningEnabled ?? false
+          }
+          if (parsed.eveningBrowserEnabled === undefined) {
+            parsed.eveningBrowserEnabled = parsed.eveningEnabled ?? false
+          }
+          setPrefs({ ...DEFAULT_PREFS, ...parsed })
+        } catch { /* ignore */ }
+      }
 
       if ('Notification' in window) setPermission(Notification.permission)
       setLoading(false)
@@ -575,9 +630,29 @@ export default function SettingsPage() {
     setPrefsSaved(false)
   }
 
-  function savePrefs() {
+  async function savePrefs() {
     localStorage.setItem('amor-fati-notification-prefs', JSON.stringify(prefs))
     sendPrefsToSW(prefs)
+
+    // Send a test/confirmation email if email reminders are enabled and user has an email
+    setEmailError(null)
+    if (user?.email && (prefs.emailMorningEnabled || prefs.emailEveningEnabled)) {
+      const type = prefs.emailMorningEnabled ? 'morning' : 'evening'
+      try {
+        const res = await fetch('/api/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: user.email, type }),
+        })
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({}))
+          setEmailError(json?.error ?? `Email send failed (${res.status})`)
+        }
+      } catch {
+        setEmailError('Could not reach email service')
+      }
+    }
+
     setPrefsSaved(true)
     setTimeout(() => setPrefsSaved(false), 2000)
   }
@@ -641,6 +716,19 @@ export default function SettingsPage() {
       .order('entry_date', { ascending: false })
     setExporting(false)
     exportToPDF((data ?? []) as Record<string, unknown>[], user.email)
+  }
+
+  async function handleExportMarkdown() {
+    if (!user) return
+    setExportingMd(true)
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('journal_entries')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('entry_date', { ascending: false })
+    setExportingMd(false)
+    exportToMarkdown((data ?? []) as Record<string, unknown>[], user.email)
   }
 
   const initials = user?.email ? user.email.split('@')[0].slice(0, 2).toUpperCase() : '—'
@@ -891,14 +979,48 @@ export default function SettingsPage() {
           {/* ── Appearance ──────────────────────────────────────────── */}
           <div className="animate-fade-up delay-100" style={{ marginBottom: '2rem' }}>
             <SectionLabel label="Appearance" />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+              {/* System card */}
+              <button
+                onClick={() => setTheme('system')}
+                style={{
+                  background: 'var(--card)',
+                  border: theme === 'system' ? '2px solid var(--accent)' : '2px solid var(--border)',
+                  borderRadius: '12px', padding: '14px 12px', cursor: 'pointer',
+                  textAlign: 'left', transition: 'all 0.2s', position: 'relative',
+                }}
+              >
+                <div style={{
+                  background: 'linear-gradient(135deg, #0b0c0e 50%, #f5efe6 50%)', borderRadius: '6px',
+                  padding: '10px 10px 8px', marginBottom: '10px', border: '1px solid var(--border)',
+                }}>
+                  <div style={{ width: '60%', height: '3px', background: 'var(--accent)', borderRadius: '2px', marginBottom: '5px', opacity: 0.7 }} />
+                  <div style={{ width: '90%', height: '2px', background: 'var(--foreground-subtle)', borderRadius: '2px', marginBottom: '3px', opacity: 0.4 }} />
+                  <div style={{ width: '75%', height: '2px', background: 'var(--foreground-subtle)', borderRadius: '2px', opacity: 0.3 }} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <Monitor size={13} style={{ color: 'var(--foreground-muted)', marginBottom: '3px' }} />
+                    <p style={{ fontFamily: 'var(--font-ui)', fontSize: '11px', color: 'var(--foreground)', fontWeight: 500 }}>System</p>
+                  </div>
+                  {theme === 'system' && (
+                    <div style={{
+                      width: '18px', height: '18px', borderRadius: '50%', background: 'var(--accent)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <Check size={10} style={{ color: '#fff' }} />
+                    </div>
+                  )}
+                </div>
+              </button>
+
               {/* Dark card */}
               <button
                 onClick={() => setTheme('dark')}
                 style={{
                   background: 'var(--card)',
                   border: theme === 'dark' ? '2px solid var(--accent)' : '2px solid var(--border)',
-                  borderRadius: '12px', padding: '16px', cursor: 'pointer',
+                  borderRadius: '12px', padding: '14px 12px', cursor: 'pointer',
                   textAlign: 'left', transition: 'all 0.2s', position: 'relative',
                 }}
               >
@@ -932,7 +1054,7 @@ export default function SettingsPage() {
                 style={{
                   background: 'var(--card)',
                   border: theme === 'light' ? '2px solid var(--accent)' : '2px solid var(--border)',
-                  borderRadius: '12px', padding: '16px', cursor: 'pointer',
+                  borderRadius: '12px', padding: '14px 12px', cursor: 'pointer',
                   textAlign: 'left', transition: 'all 0.2s', position: 'relative',
                 }}
               >
@@ -960,11 +1082,38 @@ export default function SettingsPage() {
                 </div>
               </button>
             </div>
+
+            {/* Text magnification toggle */}
+            <div style={{ marginTop: '12px' }}>
+              <Card>
+                <Row
+                  icon={<Type size={15} />}
+                  label="Text magnification"
+                  sublabel="Hover over text to enlarge it"
+                  onClick={() => setTextMagnify(!textMagnify)}
+                  toggle
+                  checked={textMagnify}
+                  last
+                />
+              </Card>
+              <p style={{
+                fontFamily: 'var(--font-ui)', fontSize: '10px',
+                color: 'var(--foreground-subtle)', opacity: 0.5,
+                marginTop: '6px', paddingLeft: '4px', lineHeight: 1.5,
+              }}>
+                When enabled, text grows slightly when you hover over it — helpful for readability.
+              </p>
+            </div>
           </div>
 
           {/* ── Reminders ───────────────────────────────────────────── */}
           <div className="animate-fade-up delay-200" style={{ marginBottom: '2rem' }}>
-            <SectionLabel label="Reminders" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.6rem' }}>
+              <p style={{ fontFamily: 'var(--font-ui)', fontSize: '9px', letterSpacing: '0.22em', color: 'var(--foreground-subtle)', textTransform: 'uppercase', opacity: 0.7 }}>
+                Reminders
+              </p>
+              <InfoBubble text="Set daily reminders to keep your Stoic practice consistent. Browser notifications require permission. Email reminders are sent at your chosen time." size={12} />
+            </div>
 
             {permission === 'denied' && (
               <div style={{
@@ -1002,16 +1151,21 @@ export default function SettingsPage() {
                 label="Morning practice"
                 enabled={prefs.morningEnabled}
                 time={prefs.morningTime}
-                browserOn={prefs.morningEnabled}
+                browserOn={prefs.morningBrowserEnabled}
                 emailOn={prefs.emailMorningEnabled}
                 onToggle={() => {
-                  if (!prefs.morningEnabled && permission === 'default') { requestPermission(); return }
-                  updatePref('morningEnabled', !prefs.morningEnabled)
+                  const next = !prefs.morningEnabled
+                  // When turning on with no channels selected, default browser on (ask permission)
+                  if (next && !prefs.morningBrowserEnabled && !prefs.emailMorningEnabled) {
+                    if (permission === 'default') { requestPermission() }
+                    updatePref('morningBrowserEnabled', true)
+                  }
+                  updatePref('morningEnabled', next)
                 }}
                 onTimeChange={v => updatePref('morningTime', v)}
                 onBrowserToggle={() => {
-                  if (permission === 'default') { requestPermission(); return }
-                  updatePref('morningEnabled', !prefs.morningEnabled)
+                  if (!prefs.morningBrowserEnabled && permission === 'default') { requestPermission(); return }
+                  updatePref('morningBrowserEnabled', !prefs.morningBrowserEnabled)
                 }}
                 onEmailToggle={() => updatePref('emailMorningEnabled', !prefs.emailMorningEnabled)}
               />
@@ -1020,16 +1174,20 @@ export default function SettingsPage() {
                 label="Evening reflection"
                 enabled={prefs.eveningEnabled}
                 time={prefs.eveningTime}
-                browserOn={prefs.eveningEnabled}
+                browserOn={prefs.eveningBrowserEnabled}
                 emailOn={prefs.emailEveningEnabled}
                 onToggle={() => {
-                  if (!prefs.eveningEnabled && permission === 'default') { requestPermission(); return }
-                  updatePref('eveningEnabled', !prefs.eveningEnabled)
+                  const next = !prefs.eveningEnabled
+                  if (next && !prefs.eveningBrowserEnabled && !prefs.emailEveningEnabled) {
+                    if (permission === 'default') { requestPermission() }
+                    updatePref('eveningBrowserEnabled', true)
+                  }
+                  updatePref('eveningEnabled', next)
                 }}
                 onTimeChange={v => updatePref('eveningTime', v)}
                 onBrowserToggle={() => {
-                  if (permission === 'default') { requestPermission(); return }
-                  updatePref('eveningEnabled', !prefs.eveningEnabled)
+                  if (!prefs.eveningBrowserEnabled && permission === 'default') { requestPermission(); return }
+                  updatePref('eveningBrowserEnabled', !prefs.eveningBrowserEnabled)
                 }}
                 onEmailToggle={() => updatePref('emailEveningEnabled', !prefs.emailEveningEnabled)}
                 last
@@ -1044,11 +1202,24 @@ export default function SettingsPage() {
             >
               {prefsSaved ? <><Check size={14} /> Saved</> : 'Save reminders'}
             </JolyButton>
+            {emailError && (
+              <p style={{
+                fontFamily: 'var(--font-ui)', fontSize: '11px',
+                color: '#c0392b', marginTop: '8px', lineHeight: 1.5,
+              }}>
+                Email error: {emailError}. Check your spam folder, or verify the amorfati.app domain in Resend.
+              </p>
+            )}
           </div>
 
           {/* ── Your Practice ────────────────────────────────────────── */}
           <div className="animate-fade-up delay-300" style={{ marginBottom: '2rem' }}>
-            <SectionLabel label="Your practice" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.6rem' }}>
+              <p style={{ fontFamily: 'var(--font-ui)', fontSize: '9px', letterSpacing: '0.22em', color: 'var(--foreground-subtle)', textTransform: 'uppercase', opacity: 0.7 }}>
+                Your practice
+              </p>
+              <InfoBubble text="Your streak counts consecutive days with at least one journal entry. Ranks progress from Seeker (1+ days) to Practitioner (7+), Philosopher (30+), and Sage (90+)." size={12} />
+            </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
 
               {/* Streak card */}
@@ -1160,6 +1331,12 @@ export default function SettingsPage() {
                 label={exporting ? 'Preparing export…' : 'Export journal'}
                 sublabel="Opens a print-ready PDF view"
                 onClick={exporting ? undefined : handleExport}
+              />
+              <Row
+                icon={<Download size={15} />}
+                label={exportingMd ? 'Preparing export…' : 'Export as Markdown'}
+                sublabel="Downloads a .md file of all entries"
+                onClick={exportingMd ? undefined : handleExportMarkdown}
                 last
               />
             </Card>
