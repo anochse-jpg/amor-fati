@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 // ─── Email template ──────────────────────────────────────────────────────────
 
 function buildEmailHtml(type: 'morning' | 'evening', time: string) {
@@ -168,6 +166,7 @@ export async function POST(req: NextRequest) {
   if (!process.env.RESEND_API_KEY) {
     return NextResponse.json({ error: 'RESEND_API_KEY not configured' }, { status: 503 })
   }
+  const resend = new Resend(process.env.RESEND_API_KEY)
 
   const body = await req.json().catch(() => null)
   if (!body?.email || !body?.type) {
