@@ -7,6 +7,7 @@ import { Nav, ProgressBar } from '@/components/ui'
 import MotionButton from '@/components/ui/motion-button'
 import { JolyButton } from '@/components/ui/joly-button'
 import { FloatingLabelTextarea } from '@/components/ui/textarea-with-floating-label'
+import { InfoBubble } from '@/components/ui/info-bubble'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -237,6 +238,12 @@ export default function PracticePage() {
             >
               Practice Library
             </h1>
+            <p style={{
+              fontFamily: 'var(--font-ui)', fontSize: '11px', color: 'var(--foreground-subtle)',
+              lineHeight: 1.6, marginTop: '8px', opacity: 0.6,
+            }}>
+              Guided Stoic exercises to deepen your practice. <InfoBubble text="Each exercise is based on a technique practised by the ancient Stoics. Work through the guided steps at your own pace — your responses are saved to your journal." size={12} />
+            </p>
           </div>
 
           {/* Unlocked exercise cards */}
@@ -708,19 +715,23 @@ export default function PracticePage() {
                 padding: '24px',
               }}
             >
-              <p
-                style={{
-                  fontFamily: 'var(--font-ui)',
-                  fontSize: '10px',
-                  letterSpacing: '0.2em',
-                  color: 'var(--accent)',
-                  textTransform: 'uppercase',
-                  marginBottom: '1rem',
-                  opacity: 0.7,
-                }}
-              >
-                Step {stepNum + 1} — {currentStep.heading}
-              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '1rem' }}>
+                <p
+                  style={{
+                    fontFamily: 'var(--font-ui)',
+                    fontSize: '10px',
+                    letterSpacing: '0.2em',
+                    color: 'var(--accent)',
+                    textTransform: 'uppercase',
+                    opacity: 0.7,
+                  }}
+                >
+                  Step {stepNum + 1} — {currentStep.heading}
+                </p>
+                {currentStep.contextNote && (
+                  <InfoBubble text={currentStep.contextNote} size={12} />
+                )}
+              </div>
               <h2
                 style={{
                   fontFamily: 'var(--font-display)',

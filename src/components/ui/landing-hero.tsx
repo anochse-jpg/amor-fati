@@ -449,9 +449,16 @@ export function LandingHero() {
   return (
     <>
       {/* ══════════════════════════════════════════════════════════════════
+          MARQUEE TICKER — top of page
+      ══════════════════════════════════════════════════════════════════ */}
+      <div className="relative z-10">
+        <MarqueeTicker />
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════════════
           SECTION 1 — HERO
       ══════════════════════════════════════════════════════════════════ */}
-      <section className="relative flex flex-col items-center justify-center min-h-screen px-6" style={{ zIndex: 1 }}>
+      <section className="relative flex flex-col items-center justify-center min-h-[72vh] px-6" style={{ zIndex: 1 }}>
         {/* Shader animation — only this section */}
         <div style={{ position: 'absolute', inset: 0, zIndex: 0, overflow: 'hidden' }}>
           <ShaderAnimation />
@@ -661,35 +668,24 @@ export function LandingHero() {
         />
 
       {/* ══════════════════════════════════════════════════════════════════
-          MARQUEE TICKER — Stoic phrases scrolling between sections
-      ══════════════════════════════════════════════════════════════════ */}
-      <div className="relative z-10">
-        <FadeIn>
-          <MarqueeTicker />
-        </FadeIn>
-      </div>
-
-      {/* ══════════════════════════════════════════════════════════════════
           SECTION 2 — THE PRACTICE (Premium spinning-border cards)
       ══════════════════════════════════════════════════════════════════ */}
       <section className="relative z-10 px-6 py-10">
         <div style={{ maxWidth: '780px', margin: '0 auto' }}>
-          <FadeIn>
-            <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-              <SectionLabel>The Practice</SectionLabel>
-              <h2 style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 'clamp(2rem, 5vw, 2.75rem)',
-                fontWeight: 300,
-                color: 'var(--foreground)',
-                lineHeight: 1.2,
-                letterSpacing: '-0.02em',
-              }}>
-                Begin each day with clarity.{' '}
-                <span style={{ fontStyle: 'italic', color: 'var(--accent)' }}>End it with honesty.</span>
-              </h2>
-            </div>
-          </FadeIn>
+          <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+            <SectionLabel>The Practice</SectionLabel>
+            <h2 style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: 'clamp(2rem, 5vw, 2.75rem)',
+              fontWeight: 300,
+              color: 'var(--foreground)',
+              lineHeight: 1.2,
+              letterSpacing: '-0.02em',
+            }}>
+              Begin each day with clarity.{' '}
+              <span style={{ fontStyle: 'italic', color: 'var(--accent)' }}>End it with honesty.</span>
+            </h2>
+          </div>
 
           <div style={{
             display: 'grid',

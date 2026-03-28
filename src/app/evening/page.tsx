@@ -11,6 +11,7 @@ import { FloatingLabelTextarea } from '@/components/ui/textarea-with-floating-la
 import { RatingInteraction } from '@/components/ui/emoji-rating'
 import { useTimeOfDay } from '@/hooks/useTimeOfDay'
 import { selectDailyPrompt } from '@/lib/utils'
+import { InfoBubble } from '@/components/ui/info-bubble'
 
 // ─── Prompt banks ─────────────────────────────────────────────────────────────
 
@@ -362,19 +363,30 @@ export default function EveningPage() {
                   padding: '24px',
                 }}
               >
-                <p
-                  style={{
-                    fontFamily: 'var(--font-ui)',
-                    fontSize: '10px',
-                    letterSpacing: '0.2em',
-                    color: 'var(--accent)',
-                    textTransform: 'uppercase',
-                    marginBottom: '1rem',
-                    opacity: 0.7,
-                  }}
-                >
-                  {current.label}
-                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '1rem' }}>
+                  <p
+                    style={{
+                      fontFamily: 'var(--font-ui)',
+                      fontSize: '10px',
+                      letterSpacing: '0.2em',
+                      color: 'var(--accent)',
+                      textTransform: 'uppercase',
+                      opacity: 0.7,
+                    }}
+                  >
+                    {current.label}
+                  </p>
+                  <InfoBubble
+                    size={12}
+                    text={
+                      current.id === 'accomplished'
+                        ? 'Seneca practised evening review every night. Reflect honestly on what went well — acknowledging your efforts builds the habit of virtue.'
+                        : current.id === 'struggle'
+                        ? 'The Stoics believed self-examination was the path to growth. Honest accounting of struggles is not self-criticism — it is how wisdom is built.'
+                        : 'Every experience holds a lesson. Epictetus taught that difficulties are training for the soul — distilling a lesson turns hardship into progress.'
+                    }
+                  />
+                </div>
                 <h2
                   style={{
                     fontFamily: 'var(--font-display)',
@@ -440,19 +452,21 @@ export default function EveningPage() {
                   padding: '24px',
                 }}
               >
-                <p
-                  style={{
-                    fontFamily: 'var(--font-ui)',
-                    fontSize: '10px',
-                    letterSpacing: '0.2em',
-                    color: 'var(--accent)',
-                    textTransform: 'uppercase',
-                    marginBottom: '1rem',
-                    opacity: 0.7,
-                  }}
-                >
-                  Evening mood
-                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '1rem' }}>
+                  <p
+                    style={{
+                      fontFamily: 'var(--font-ui)',
+                      fontSize: '10px',
+                      letterSpacing: '0.2em',
+                      color: 'var(--accent)',
+                      textTransform: 'uppercase',
+                      opacity: 0.7,
+                    }}
+                  >
+                    Evening mood
+                  </p>
+                  <InfoBubble text="Tracking your evening mood alongside your reflections helps reveal how your daily practice influences your wellbeing over time." size={12} />
+                </div>
 
                 <RatingInteraction onChange={setMood} className="mb-6" />
 

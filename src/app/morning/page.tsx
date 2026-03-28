@@ -11,6 +11,7 @@ import { FloatingLabelTextarea } from '@/components/ui/textarea-with-floating-la
 import { RatingInteraction } from '@/components/ui/emoji-rating'
 import { useTimeOfDay } from '@/hooks/useTimeOfDay'
 import { selectDailyPrompt } from '@/lib/utils'
+import { InfoBubble } from '@/components/ui/info-bubble'
 
 // ─── Prompt banks ─────────────────────────────────────────────────────────────
 
@@ -376,19 +377,30 @@ export default function MorningPage() {
                   padding: '24px',
                 }}
               >
-                <p
-                  style={{
-                    fontFamily: 'var(--font-ui)',
-                    fontSize: '10px',
-                    letterSpacing: '0.2em',
-                    color: 'var(--accent)',
-                    textTransform: 'uppercase',
-                    marginBottom: '1rem',
-                    opacity: 0.7,
-                  }}
-                >
-                  {current.label}
-                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '1rem' }}>
+                  <p
+                    style={{
+                      fontFamily: 'var(--font-ui)',
+                      fontSize: '10px',
+                      letterSpacing: '0.2em',
+                      color: 'var(--accent)',
+                      textTransform: 'uppercase',
+                      opacity: 0.7,
+                    }}
+                  >
+                    {current.label}
+                  </p>
+                  <InfoBubble
+                    size={12}
+                    text={
+                      current.id === 'intention'
+                        ? 'Setting a morning intention is a core Stoic practice. Marcus Aurelius began each day by preparing his mind for what lay ahead.'
+                        : current.id === 'obstacle'
+                        ? 'The Stoics practiced premeditatio malorum — anticipating difficulties so they could respond with wisdom rather than react with emotion.'
+                        : 'Gratitude was central to Stoic philosophy. Epictetus taught that true wealth lies not in having more, but in appreciating what you already have.'
+                    }
+                  />
+                </div>
                 <h2
                   style={{
                     fontFamily: 'var(--font-display)',
@@ -454,19 +466,21 @@ export default function MorningPage() {
                   padding: '24px',
                 }}
               >
-                <p
-                  style={{
-                    fontFamily: 'var(--font-ui)',
-                    fontSize: '10px',
-                    letterSpacing: '0.2em',
-                    color: 'var(--accent)',
-                    textTransform: 'uppercase',
-                    marginBottom: '1rem',
-                    opacity: 0.7,
-                  }}
-                >
-                  Morning mood
-                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '1rem' }}>
+                  <p
+                    style={{
+                      fontFamily: 'var(--font-ui)',
+                      fontSize: '10px',
+                      letterSpacing: '0.2em',
+                      color: 'var(--accent)',
+                      textTransform: 'uppercase',
+                      opacity: 0.7,
+                    }}
+                  >
+                    Morning mood
+                  </p>
+                  <InfoBubble text="Track your mood each morning to spot patterns over time. There are no right answers — simply notice how you feel right now." size={12} />
+                </div>
 
                 <RatingInteraction onChange={setMood} className="mb-6" />
 

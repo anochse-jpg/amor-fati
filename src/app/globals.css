@@ -110,6 +110,7 @@
 
 html {
   scroll-behavior: smooth;
+  zoom: 1.12;
 }
 
 body {

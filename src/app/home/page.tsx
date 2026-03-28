@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { motion } from 'motion/react'
 import Link from 'next/link'
-import { Settings } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Nav } from '@/components/ui'
 import { useTimeOfDay } from '@/hooks/useTimeOfDay'
@@ -11,6 +10,7 @@ import { selectDailyPrompt, computeStreak } from '@/lib/utils'
 import { StreakBadge } from '@/components/ui/streak-badge'
 import { MoodSparkline } from '@/components/ui/mood-sparkline'
 import { Skeleton } from '@/components/ui/skeleton'
+import { InfoBubble } from '@/components/ui/info-bubble'
 
 // ─── Quote bank ───────────────────────────────────────────────────────────────
 
@@ -294,15 +294,21 @@ function QuickLink({
             borderRadius: '10px',
             padding: '16px',
             cursor: 'pointer',
-            transition: 'all 0.2s ease',
+            transition: 'all 0.25s ease',
+            position: 'relative',
+            overflow: 'hidden',
           }}
           onMouseEnter={e => {
             const el = e.currentTarget as HTMLDivElement
-            el.style.borderColor = 'var(--accent-dim)'
+            el.style.borderColor = 'var(--accent)'
+            el.style.boxShadow = '0 0 0 1px rgba(200,149,106,0.12), 0 4px 20px rgba(0,0,0,0.22), 0 0 28px rgba(200,149,106,0.1)'
+            el.style.transform = 'translateY(-1px)'
           }}
           onMouseLeave={e => {
             const el = e.currentTarget as HTMLDivElement
             el.style.borderColor = 'var(--border)'
+            el.style.boxShadow = 'none'
+            el.style.transform = 'translateY(0)'
           }}
         >
           <div style={{ fontSize: '14px', color: 'var(--accent)', opacity: 0.7, marginBottom: '6px' }}>
@@ -467,9 +473,9 @@ export default function HomePage() {
               Amor Fati
             </span>
           </div>
-          <Link href="/settings" style={{ display: 'flex', alignItems: 'center', opacity: 0.4, textDecoration: 'none' }}>
-            <Settings size={14} color="var(--foreground-subtle)" />
-          </Link>
+          {entries !== null && streak > 0 && (
+            <StreakBadge streak={streak} />
+          )}
         </motion.div>
 
         {/* ── Greeting ── */}
@@ -490,7 +496,7 @@ export default function HomePage() {
           }}>
             {today}
           </p>
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+          <div style={{ marginBottom: '0.4rem' }}>
             <h1 style={{
               fontFamily: 'var(--font-display)',
               fontSize: '2.2rem',
@@ -500,11 +506,6 @@ export default function HomePage() {
             }}>
               {config.salutation}{userName ? `, ${userName}` : ''}.
             </h1>
-            {entries !== null && streak > 0 && (
-              <div style={{ paddingBottom: '4px' }}>
-                <StreakBadge streak={streak} />
-              </div>
-            )}
           </div>
           <p style={{
             fontFamily: 'var(--font-display)',
@@ -611,17 +612,19 @@ export default function HomePage() {
           transition={{ duration: 0.4, delay: 0.25 }}
           style={{ marginBottom: '0.75rem' }}
         >
-          <p style={{
-            fontFamily: 'var(--font-ui)',
-            fontSize: '9px',
-            letterSpacing: '0.22em',
-            textTransform: 'uppercase',
-            color: 'var(--foreground-subtle)',
-            opacity: 0.35,
-            marginBottom: '0.85rem',
-          }}>
-            Your Practice
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.85rem' }}>
+            <p style={{
+              fontFamily: 'var(--font-ui)',
+              fontSize: '9px',
+              letterSpacing: '0.22em',
+              textTransform: 'uppercase',
+              color: 'var(--foreground-subtle)',
+              opacity: 0.35,
+            }}>
+              Your Practice
+            </p>
+            <InfoBubble text="Your daily practices — morning intention-setting and evening reflection — are the foundation of a Stoic life. Complete both each day to build your streak." size={11} />
+          </div>
         </motion.div>
 
         {entries === null ? (

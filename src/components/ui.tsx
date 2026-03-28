@@ -3,6 +3,7 @@
 import { cn } from '@/lib/utils'
 import { ButtonHTMLAttributes, forwardRef, InputHTMLAttributes, TextareaHTMLAttributes } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
+import { Settings } from 'lucide-react'
 
 // ─── Button ───────────────────────────────────────────────────────────────────
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -254,7 +255,7 @@ export function Nav({ current }: { current: string }) {
     { href: '/morning', label: 'Morning' },
     { href: '/evening', label: 'Evening' },
     { href: '/history', label: 'Journal' },
-    { href: '/insights', label: 'Insights' },
+    { href: '/settings', label: 'Settings', icon: 'gear' as const },
   ]
 
   return (
@@ -267,15 +268,15 @@ export function Nav({ current }: { current: string }) {
         borderTop: '1px solid var(--nav-border)',
       }}
     >
-      <div className="max-w-lg mx-auto px-6 py-2.5">
+      <div className="max-w-lg mx-auto px-4 py-2.5">
         <div className="flex justify-around items-center">
-          {links.map(({ href, label }) => {
+          {links.map(({ href, label, icon }) => {
             const isActive = current === href
             return (
               <a
                 key={href}
                 href={href}
-                className="relative flex flex-col items-center gap-1 px-3 py-1.5 rounded-lg"
+                className="relative flex flex-col items-center gap-1 px-2 py-1.5 rounded-lg"
                 style={{ textDecoration: 'none' }}
               >
                 {isActive && (
@@ -293,9 +294,15 @@ export function Nav({ current }: { current: string }) {
                     color: isActive ? 'var(--accent)' : 'var(--foreground-subtle)',
                     transition: 'color 0.2s',
                     lineHeight: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }}
                 >
-                  {NAV_ICONS[href]}
+                  {icon === 'gear'
+                    ? <Settings size={13} strokeWidth={isActive ? 2 : 1.5} />
+                    : NAV_ICONS[href]
+                  }
                 </span>
                 <span
                   className="relative"
